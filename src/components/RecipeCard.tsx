@@ -211,7 +211,10 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onBack }) => {
   // Copy recipe summary & ingredients to clipboard
   const handleCopyRecipe = () => {
     const text = `${recipe.title}\n\n${recipe.nostalgia.summary}\n\nINGREDIENTS:\n${recipe.ingredients
-      .map((i) => `- ${unitSystem === 'imperial' ? i.imperial : i.metric} ${i.item}`)
+      .map((i) => {
+        const amt = i.amount || i.unit ? `${i.amount || ''} ${i.unit || ''}`.trim() : unitSystem === 'imperial' ? i.imperial : i.metric;
+        return `- ${amt} ${i.name || i.item}`;
+      })
       .join('\n')}\n\nINSTRUCTIONS:\n${recipe.instructions
       .map((ins) => `${ins.stepNumber}. ${ins.instruction}`)
       .join('\n')}`;
@@ -407,26 +410,36 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onBack }) => {
             </div>
 
             <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {recipe.ingredients.map((ing, idx) => (
-                <li
-                  key={idx}
-                  className="flex flex-col justify-between bg-[#FDFCF7] p-3.5 rounded-xl border border-[#D8C3B1] text-sm text-[#2C1D11] shadow-vintage-inset"
-                >
-                  <div className="block">
-                    <span className="block font-bold text-[#94442B] text-xs sm:text-sm mb-1 tracking-tight">
-                      {unitSystem === 'imperial' ? ing.imperial : ing.metric}
-                    </span>
-                    <span className="block font-medium text-[#2C1D11] text-sm leading-snug">
-                      {ing.item}
-                    </span>
-                  </div>
-                  {ing.notes && (
-                    <span className="block text-xs text-[#705335] italic mt-2 pt-1.5 border-t border-[#D8C3B1]/40">
-                      {ing.notes}
-                    </span>
-                  )}
-                </li>
-              ))}
+              {recipe.ingredients.map((ing, idx) => {
+                const amountUnitDisplay = ing.amount || ing.unit
+                  ? `${ing.amount || ''} ${ing.unit || ''}`.trim()
+                  : unitSystem === 'imperial'
+                  ? ing.imperial || 'As needed'
+                  : ing.metric || ing.imperial || 'As needed';
+
+                const nameDisplay = ing.name || ing.item;
+
+                return (
+                  <li
+                    key={idx}
+                    className="flex flex-col justify-between bg-[#FDFCF7] p-3.5 rounded-xl border border-[#D8C3B1] text-sm text-[#2C1D11] shadow-vintage-inset"
+                  >
+                    <div className="block">
+                      <span className="block font-bold text-[#94442B] text-xs sm:text-sm mb-1 tracking-tight">
+                        {amountUnitDisplay}
+                      </span>
+                      <strong className="block font-bold text-[#2C1D11] text-sm leading-snug">
+                        {nameDisplay}
+                      </strong>
+                    </div>
+                    {ing.notes && (
+                      <span className="block text-xs text-[#705335] italic mt-2 pt-1.5 border-t border-[#D8C3B1]/40">
+                        {ing.notes}
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </div>
 

@@ -1,4 +1,7 @@
 export interface IIngredient {
+  amount?: string;
+  unit?: string;
+  name?: string;
   item: string;
   imperial: string;
   metric: string;

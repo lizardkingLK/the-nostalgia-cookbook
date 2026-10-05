@@ -77,7 +77,38 @@ function runTests() {
     assert(false, `Test 2 failed with error: ${(e as Error).message}`);
   }
 
-  // Test 3: Rejection of invalid structures
+  // Test 3: Standardized amount/unit/name with steps and story_journal
+  try {
+    const rawNewSchema = JSON.stringify({
+      title: "Rose's Real Sunday Pot Roast",
+      ingredients: [
+        { amount: "4", unit: "lbs", name: "Beef Chuck Roast" },
+        { amount: "1", unit: "tbsp", name: "Coarse Salt" }
+      ],
+      steps: [
+        "Sear the beef chuck roast on all sides in a hot Dutch oven.",
+        "Add sliced onions, carrots, and broth, cover and braise."
+      ],
+      story_journal: [
+        "Recalling Rose's real Sunday Pot Roast during the blizzard of 1968.",
+        "The whole house was filled with the aroma on cold Sunday afternoons."
+      ],
+      family_members: ["Rose"],
+      era: "Winter of 1968",
+      secret_tip: "Sear the meat deeply before adding liquid."
+    });
+
+    const parsed = cleanAndParseGemmaResponse(rawNewSchema);
+    assert(parsed.title === "Rose's Real Sunday Pot Roast", "Parses new standardized pot roast title");
+    assert(parsed.ingredients[0].name === "Beef Chuck Roast", "Extracts clean ingredient name without pronouns");
+    assert(parsed.ingredients[0].amount === "4" && parsed.ingredients[0].unit === "lbs", "Extracts distinct amount and unit fields");
+    assert(parsed.instructions.length === 2, "Normalizes steps into instructions array");
+    assert(parsed.nostalgia.anecdotes.length === 2, "Normalizes story_journal into nostalgia anecdotes");
+  } catch (e) {
+    assert(false, `Test 3 failed with error: ${(e as Error).message}`);
+  }
+
+  // Test 4: Rejection of invalid structures
   try {
     const invalidJson = '{"foo": "bar"}';
     cleanAndParseGemmaResponse(invalidJson);
