@@ -17,7 +17,10 @@ export default defineConfig(() => {
       hmr: process.env.DISABLE_HMR !== 'true',
       // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
-      allowedHosts: ['all']
+      allowedHosts: true // Use boolean true instead of an array string
     },
+    preview: {
+      allowedHosts: true // This breaks the loop if DigitalOcean runs a production preview script
+    }
   };
 });
