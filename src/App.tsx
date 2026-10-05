@@ -1,18 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Navbar } from './components/Navbar';
 import { RecipeBox } from './components/RecipeBox';
 import { RecipeCard } from './components/RecipeCard';
 import { AudioRecorder } from './components/AudioRecorder';
 import { PrivacyModal } from './components/PrivacyModal';
 import { IRecipe } from './types/recipe';
-import { INITIAL_RECIPES } from './data/sampleRecipes';
-import { BookOpen, Sparkles, Heart } from 'lucide-react';
+import { BookOpen } from 'lucide-react';
 
 export default function App() {
-  const [recipes, setRecipes] = useState<IRecipe[]>(INITIAL_RECIPES);
+  // Empty initial recipes state - NO SEED DATA
+  const [recipes, setRecipes] = useState<IRecipe[]>([]);
   const [activeTab, setActiveTab] = useState<'box' | 'record' | 'privacy'>('box');
   const [selectedRecipe, setSelectedRecipe] = useState<IRecipe | null>(null);
-  const [isResetting, setIsResetting] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [userSession, setUserSession] = useState<{
     name?: string | null;
@@ -20,46 +19,47 @@ export default function App() {
     image?: string | null;
   } | null>(null);
 
-  // Load recipes and check session on mount
-  useEffect(() => {
-    fetch('/api/recipes')
-      .then((res) => {
-        if (res.ok) return res.json();
-        throw new Error('Failed to load recipes');
-      })
-      .then((data: IRecipe[]) => {
-        if (Array.isArray(data) && data.length > 0) {
+  // Fetch real user recipes from MongoDB / backend
+  const fetchRecipes = useCallback(async (email?: string | null) => {
+    try {
+      const url = email ? `/api/recipes?email=${encodeURIComponent(email)}` : '/api/recipes';
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
           setRecipes(data);
         }
-      })
-      .catch((err) => {
-        console.warn('Using client-side sample recipes fallback:', err);
-      });
+      }
+    } catch (err) {
+      console.warn('Failed to load recipes from backend:', err);
+    }
+  }, []);
 
-    // Check for active NextAuth session
+  // Check session and load recipes on mount
+  useEffect(() => {
     fetch('/api/auth/session')
       .then((res) => (res.ok ? res.json() : null))
-      .then((session) => {
-        if (session && session.user) {
-          setUserSession(session.user);
+      .then((data) => {
+        if (data && data.user) {
+          setUserSession(data.user);
+          fetchRecipes(data.user.email);
+        } else {
+          fetchRecipes();
         }
       })
       .catch(() => {
-        // Fallback for development/preview
+        fetchRecipes();
       });
-  }, []);
+  }, [fetchRecipes]);
 
-  const handleSignIn = () => {
-    // Demonstration/Preview sign in if NextAuth server is not connected to live Google credentials
-    setUserSession({
-      name: 'Eleanor Vance',
-      email: 'eleanor.vance@familyarchive.com',
-      image: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
-    });
-  };
-
-  const handleSignOut = () => {
-    setUserSession(null);
+  // Handle session change from Google Sign In
+  const handleSessionChange = (newSession: { name: string; email: string; image: string } | null) => {
+    setUserSession(newSession);
+    if (newSession?.email) {
+      fetchRecipes(newSession.email);
+    } else {
+      fetchRecipes();
+    }
   };
 
   // Handler when a recipe is synthesized
@@ -79,7 +79,7 @@ export default function App() {
     try {
       await fetch(`/api/recipes/${id}`, { method: 'DELETE' });
     } catch (err) {
-      console.warn('Server delete note:', err);
+      console.warn('Server delete notice:', err);
     }
 
     setRecipes((prev) => prev.filter((r) => r.id !== id));
@@ -88,25 +88,17 @@ export default function App() {
     }
   };
 
-  // Reset to default sample heirlooms
-  const handleResetSamples = async () => {
-    if (!window.confirm('Restore initial sample family recipes?')) return;
+  // Clear all recipes in this box
+  const handleClearRecipes = async () => {
+    if (!window.confirm('Clear all recipes from your recipe box?')) return;
     try {
-      setIsResetting(true);
-      const res = await fetch('/api/reset-samples', { method: 'POST' });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.recipes) setRecipes(data.recipes);
-      } else {
-        setRecipes(INITIAL_RECIPES);
-      }
+      await fetch('/api/clear-recipes', { method: 'POST' });
     } catch {
-      setRecipes(INITIAL_RECIPES);
-    } finally {
-      setIsResetting(false);
-      setSelectedRecipe(null);
-      setActiveTab('box');
+      // Ignore
     }
+    setRecipes([]);
+    setSelectedRecipe(null);
+    setActiveTab('box');
   };
 
   return (
@@ -125,11 +117,9 @@ export default function App() {
           }
         }}
         recipesCount={recipes.length}
-        onResetSamples={handleResetSamples}
-        isResetting={isResetting}
+        onClearRecipes={handleClearRecipes}
         userSession={userSession}
-        onSignIn={handleSignIn}
-        onSignOut={handleSignOut}
+        onSessionChange={handleSessionChange}
       />
 
       {/* Main View Router */}
@@ -165,10 +155,10 @@ export default function App() {
             <BookOpen className="w-4 h-4 text-[#94442B]" />
             <span>The Nostalgia Cookbook</span>
             <span className="text-[#D8C3B1]">&bull;</span>
-            <span className="text-[#607D68]">Hacktoberfest Edition</span>
+            <span className="text-[#607D68]">Open-Source Gemma &amp; Gemini Vault</span>
           </div>
           <p className="italic">
-            Building for family members using Open-Source AI principles. Multimodal audio ingestion powered by Gemini; private culinary restorer powered by Gemma.
+            Private oral family archivist. Authenticated with Google &amp; persisted to MongoDB Atlas.
           </p>
         </div>
       </footer>

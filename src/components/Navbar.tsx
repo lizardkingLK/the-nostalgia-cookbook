@@ -6,13 +6,13 @@ interface NavbarProps {
   activeTab: 'box' | 'record' | 'privacy';
   setActiveTab: (tab: 'box' | 'record' | 'privacy') => void;
   recipesCount: number;
-  onResetSamples: () => void;
-  isResetting: boolean;
+  onClearRecipes?: () => void;
   userSession?: {
     name?: string | null;
     email?: string | null;
     image?: string | null;
   } | null;
+  onSessionChange?: (session: { name: string; email: string; image: string } | null) => void;
   onSignIn?: () => void;
   onSignOut?: () => void;
 }
@@ -21,9 +21,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   activeTab,
   setActiveTab,
   recipesCount,
-  onResetSamples,
-  isResetting,
+  onClearRecipes,
   userSession,
+  onSessionChange,
   onSignIn,
   onSignOut,
 }) => {
@@ -99,18 +99,20 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Google Authentication Button (Timeless Vintage Style) */}
             <GoogleSignInButton
               userSession={userSession}
+              onSessionChange={onSessionChange}
               onSignIn={onSignIn}
               onSignOut={onSignOut}
             />
 
-            <button
-              onClick={onResetSamples}
-              disabled={isResetting}
-              title="Restore Initial Sample Heirlooms"
-              className="p-2 rounded-xl text-[#705335] hover:bg-[#F3EED9] border border-[#D8C3B1] transition-all"
-            >
-              <RotateCcw className={`w-4 h-4 ${isResetting ? 'animate-spin' : ''}`} />
-            </button>
+            {onClearRecipes && recipesCount > 0 && (
+              <button
+                onClick={onClearRecipes}
+                title="Clear All Saved Recipes"
+                className="p-2 rounded-xl text-[#705335] hover:text-[#94442B] hover:bg-[#FBECE7] border border-[#D8C3B1] transition-all"
+              >
+                <RotateCcw className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
       </div>

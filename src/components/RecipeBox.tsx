@@ -176,12 +176,33 @@ export const RecipeBox: React.FC<RecipeBoxProps> = ({
       </div>
 
       {/* Recipe Cards Grid */}
-      {filteredRecipes.length === 0 ? (
+      {recipes.length === 0 ? (
+        <div className="text-center py-20 bg-[#FAF7F0] border-2 border-dashed border-[#D8C3B1] rounded-3xl p-8 space-y-4">
+          <div className="w-16 h-16 rounded-2xl bg-[#FBECE7] border border-[#E8A692] flex items-center justify-center text-[#94442B] mx-auto">
+            <BookOpen className="w-8 h-8" />
+          </div>
+          <h3 className="font-display font-bold text-2xl text-[#2C1D11]">
+            Your Recipe Box is Empty
+          </h3>
+          <p className="text-sm font-serif text-[#705335] max-w-md mx-auto italic">
+            Preserve your first family food story! Record a voice memo or upload audio to structure your heirloom cookbook in your private MongoDB vault.
+          </p>
+          <div className="pt-2">
+            <button
+              onClick={onAddNewClick}
+              className="px-6 py-3 bg-[#94442B] hover:bg-[#705335] text-white font-serif rounded-2xl font-bold text-sm shadow-md transition-all inline-flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Record or Ingest First Recipe</span>
+            </button>
+          </div>
+        </div>
+      ) : filteredRecipes.length === 0 ? (
         <div className="text-center py-16 bg-[#FAF7F0] border-2 border-dashed border-[#D8C3B1] rounded-3xl p-8">
           <BookOpen className="w-12 h-12 text-[#D8C3B1] mx-auto mb-3" />
           <h3 className="font-display font-bold text-xl text-[#2C1D11]">No Heirlooms Found</h3>
           <p className="text-sm font-serif text-[#705335] mt-1 max-w-md mx-auto italic">
-            No recipes matched your search or filters. Try adjusting keywords or record your first family audio memory above.
+            No recipes matched your search or filters. Try adjusting keywords or record another family audio memory.
           </p>
           <button
             onClick={() => {
