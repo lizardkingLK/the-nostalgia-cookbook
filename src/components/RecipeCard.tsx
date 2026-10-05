@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Clock,
   Users,
@@ -12,6 +12,7 @@ import {
   Lightbulb,
   FileText,
   Volume2,
+  VolumeX,
   Sparkles,
   Share2,
   Check,
@@ -36,9 +37,84 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onBack }) => {
   const [showRawTranscript, setShowRawTranscript] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
 
-  // Audio TTS narration state
+  // Audio narration state
   const [isNarrating, setIsNarrating] = useState(false);
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const audioInstanceRef = useRef<HTMLAudioElement | null>(null);
+
+  // Stop narration on unmount or navigation
+  useEffect(() => {
+    return () => {
+      if (audioInstanceRef.current) {
+        audioInstanceRef.current.pause();
+        audioInstanceRef.current = null;
+      }
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
+
+  const stopAllNarration = () => {
+    if (audioInstanceRef.current) {
+      audioInstanceRef.current.pause();
+      audioInstanceRef.current.currentTime = 0;
+    }
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+    setIsPlayingAudio(false);
+    setIsNarrating(false);
+  };
+
+  const playBrowserSpeech = (text: string) => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+      setIsNarrating(false);
+      setIsPlayingAudio(false);
+      return;
+    }
+
+    try {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 0.92;
+      utterance.pitch = 1.0;
+
+      const voices = window.speechSynthesis.getVoices();
+      const naturalVoice = voices.find(
+        (v) =>
+          v.lang.startsWith('en') &&
+          (v.name.includes('Natural') ||
+            v.name.includes('Google') ||
+            v.name.includes('Samantha') ||
+            v.name.includes('Daniel') ||
+            v.name.includes('Karen') ||
+            v.name.includes('Serena'))
+      );
+      if (naturalVoice) {
+        utterance.voice = naturalVoice;
+      }
+
+      utterance.onstart = () => {
+        setIsPlayingAudio(true);
+        setIsNarrating(false);
+      };
+      utterance.onend = () => {
+        setIsPlayingAudio(false);
+        setIsNarrating(false);
+      };
+      utterance.onerror = () => {
+        setIsPlayingAudio(false);
+        setIsNarrating(false);
+      };
+
+      window.speechSynthesis.speak(utterance);
+    } catch {
+      setIsPlayingAudio(false);
+      setIsNarrating(false);
+    }
+  };
 
   // Toggle step completion with confetti on finish
   const toggleStep = (stepNumber: number) => {
@@ -64,17 +140,34 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onBack }) => {
     window.print();
   };
 
-  // Synthesize oral story narration via Gemini TTS
+  // Synthesize oral story narration via Gemini TTS or Browser Voice Fallback
   const handleNarrateStory = async () => {
-    if (audioUrl) {
-      const audio = new Audio(audioUrl);
-      audio.play();
+    // If currently playing, stop it!
+    if (isPlayingAudio || isNarrating) {
+      stopAllNarration();
       return;
+    }
+
+    const textToRead = `${recipe.title}. ${recipe.nostalgia.summary} ${recipe.nostalgia.anecdotes.slice(0, 2).join(' ')}`;
+
+    // If cached cloud audio exists, play it
+    if (audioUrl) {
+      try {
+        const audio = new Audio(audioUrl);
+        audioInstanceRef.current = audio;
+        audio.onplay = () => setIsPlayingAudio(true);
+        audio.onended = () => setIsPlayingAudio(false);
+        audio.onerror = () => playBrowserSpeech(textToRead);
+        await audio.play();
+        return;
+      } catch {
+        playBrowserSpeech(textToRead);
+        return;
+      }
     }
 
     try {
       setIsNarrating(true);
-      const textToRead = `${recipe.title}. ${recipe.nostalgia.summary} ${recipe.nostalgia.anecdotes.slice(0, 2).join(' ')}`;
 
       const res = await fetch('/api/tts', {
         method: 'POST',
@@ -85,17 +178,33 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onBack }) => {
         }),
       });
 
-      if (!res.ok) throw new Error('TTS generation failed');
+      if (!res.ok) {
+        playBrowserSpeech(textToRead);
+        return;
+      }
+
       const data = await res.json();
       if (data.audioData) {
         setAudioUrl(data.audioData);
         const audio = new Audio(data.audioData);
-        audio.play();
+        audioInstanceRef.current = audio;
+        audio.onplay = () => {
+          setIsPlayingAudio(true);
+          setIsNarrating(false);
+        };
+        audio.onended = () => {
+          setIsPlayingAudio(false);
+          setIsNarrating(false);
+        };
+        audio.onerror = () => {
+          playBrowserSpeech(textToRead);
+        };
+        await audio.play();
+      } else {
+        playBrowserSpeech(textToRead);
       }
-    } catch (err) {
-      console.warn('Narration unavailable or error:', err);
-    } finally {
-      setIsNarrating(false);
+    } catch {
+      playBrowserSpeech(textToRead);
     }
   };
 
@@ -127,15 +236,26 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onBack }) => {
         <div className="flex flex-wrap items-center gap-2.5">
           <button
             onClick={handleNarrateStory}
-            disabled={isNarrating}
-            className="flex items-center gap-2 px-4 py-2 bg-[#E7ECE8] hover:bg-[#D0DBD2] text-[#3F5645] border border-[#ADC2B2] rounded-xl text-xs sm:text-sm font-semibold transition-all shadow-sm"
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all shadow-sm ${
+              isPlayingAudio
+                ? 'bg-[#94442B] text-white shadow-md'
+                : 'bg-[#E7ECE8] hover:bg-[#D0DBD2] text-[#3F5645] border border-[#ADC2B2]'
+            }`}
           >
             {isNarrating ? (
-              <Loader2 className="w-4 h-4 animate-spin text-[#3F5645]" />
+              <Loader2 className="w-4 h-4 animate-spin text-current" />
+            ) : isPlayingAudio ? (
+              <Square className="w-3.5 h-3.5 fill-current animate-pulse" />
             ) : (
               <Volume2 className="w-4 h-4 text-[#607D68]" />
             )}
-            <span>{isNarrating ? 'Tuning Voice...' : 'Listen to Story'}</span>
+            <span>
+              {isNarrating
+                ? 'Tuning Voice...'
+                : isPlayingAudio
+                ? 'Stop Narration'
+                : 'Listen to Story'}
+            </span>
           </button>
 
           <button

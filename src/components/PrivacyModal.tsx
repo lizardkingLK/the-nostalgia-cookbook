@@ -21,10 +21,15 @@ export const PrivacyModal: React.FC<PrivacyModalProps> = ({ onClose }) => {
   const [gemmaStatus, setGemmaStatus] = useState<{
     endpoint: string;
     model: string;
-    localOllamaConnected: boolean;
-    gemmaModelAvailable: boolean;
-    cloudFallbackActive: boolean;
-    message: string;
+    provider?: string;
+    isOpenRouter?: boolean;
+    hasGemmaKey?: boolean;
+    hasGeminiKey?: boolean;
+    isGeminiFormatValid?: boolean;
+    gemmaKeyMasked?: string;
+    geminiKeyMasked?: string;
+    mongoConnected?: boolean;
+    message?: string;
   } | null>(null);
 
   const [isLoading, setIsLoading] = useState(false);
@@ -59,7 +64,7 @@ export const PrivacyModal: React.FC<PrivacyModalProps> = ({ onClose }) => {
             </div>
             <div>
               <span className="text-xs font-serif font-bold uppercase tracking-wider text-[#94442B]">
-                Hacktoberfest Architecture
+                Heritage Architecture &amp; Privacy
               </span>
               <h2 className="text-2xl sm:text-3xl font-display font-bold text-[#2C1D11]">
                 Open-Source Gemma &amp; Family Privacy
@@ -80,7 +85,7 @@ export const PrivacyModal: React.FC<PrivacyModalProps> = ({ onClose }) => {
             <div className="flex items-center gap-2">
               <Cpu className="w-5 h-5 text-[#94442B]" />
               <span className="text-sm font-bold text-[#2C1D11]">
-                Gemma Inference Engine Status
+                Live Environment &amp; Inference Status
               </span>
             </div>
             <button
@@ -89,34 +94,76 @@ export const PrivacyModal: React.FC<PrivacyModalProps> = ({ onClose }) => {
               className="flex items-center gap-1.5 text-xs text-[#705335] hover:text-[#94442B] font-bold"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-              <span>Ping Endpoint</span>
+              <span>Refresh Status</span>
             </button>
           </div>
 
-          <div className="space-y-2 text-xs text-[#4A3525]">
+          <div className="space-y-2.5 text-xs text-[#4A3525]">
             <div className="flex items-center justify-between p-2.5 bg-[#FAF7F0] rounded-xl border border-[#D8C3B1]">
-              <span>Local Ollama Endpoint (http://localhost:11434):</span>
+              <div>
+                <span className="font-semibold block">Gemma Inference Model:</span>
+                <span className="text-[11px] text-[#705335]">{gemmaStatus?.endpoint}</span>
+              </div>
               <div className="flex items-center gap-1.5 font-bold">
-                {gemmaStatus?.localOllamaConnected ? (
+                <CheckCircle2 className="w-4 h-4 text-[#607D68]" />
+                <span className="text-[#3F5645]">{gemmaStatus?.model || 'google/gemma-2-27b-it'}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between p-2.5 bg-[#FAF7F0] rounded-xl border border-[#D8C3B1]">
+              <div>
+                <span className="font-semibold block">OpenRouter API Key (GEMMA_API_KEY):</span>
+                <span className="text-[11px] text-[#705335]">Used for Gemma 2 27B chat completions</span>
+              </div>
+              <div className="flex items-center gap-1.5 font-bold">
+                {gemmaStatus?.hasGemmaKey ? (
                   <>
                     <CheckCircle2 className="w-4 h-4 text-[#607D68]" />
-                    <span className="text-[#3F5645]">Connected ({gemmaStatus.model})</span>
+                    <span className="text-[#3F5645]">{gemmaStatus.gemmaKeyMasked}</span>
                   </>
                 ) : (
                   <>
                     <XCircle className="w-4 h-4 text-[#C86446]" />
-                    <span className="text-[#94442B]">Not Running Locally (Cloud Engine Active)</span>
+                    <span className="text-[#94442B]">Not Set in Env</span>
                   </>
                 )}
               </div>
             </div>
 
             <div className="flex items-center justify-between p-2.5 bg-[#FAF7F0] rounded-xl border border-[#D8C3B1]">
-              <span>Heritage Segregation Engine:</span>
-              <span className="font-bold text-[#3F5645]">
-                {gemmaStatus?.localOllamaConnected
-                  ? 'Local Air-Gapped Gemma 2 Container'
-                  : 'Gemma 2 Heritage Restorer System (Zero-Retention)'}
+              <div>
+                <span className="font-semibold block">Gemini Audio Key (GEMINI_API_KEY):</span>
+                <span className="text-[11px] text-[#705335]">Used for Multimodal Voice Transcription</span>
+              </div>
+              <div className="flex items-center gap-1.5 font-bold">
+                {gemmaStatus?.hasGeminiKey ? (
+                  gemmaStatus.isGeminiFormatValid ? (
+                    <>
+                      <CheckCircle2 className="w-4 h-4 text-[#607D68]" />
+                      <span className="text-[#3F5645]">{gemmaStatus.geminiKeyMasked} (Active)</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-[#C86446]">{gemmaStatus.geminiKeyMasked} (Needs AIzaSy... key)</span>
+                    </>
+                  )
+                ) : (
+                  <>
+                    <XCircle className="w-4 h-4 text-[#C86446]" />
+                    <span className="text-[#94442B]">Not Set in Env</span>
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between p-2.5 bg-[#FAF7F0] rounded-xl border border-[#D8C3B1]">
+              <div>
+                <span className="font-semibold block">Private Vault Database:</span>
+                <span className="text-[11px] text-[#705335]">Multi-tenant encrypted family recipe box</span>
+              </div>
+              <span className="font-bold text-[#3F5645] flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-[#607D68]" />
+                <span>{gemmaStatus?.mongoConnected ? 'MongoDB Atlas Cluster Connected' : 'Local Archive Ready'}</span>
               </span>
             </div>
           </div>

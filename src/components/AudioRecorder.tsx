@@ -25,10 +25,6 @@ interface AudioRecorderProps {
   onRecipeCreated: (recipe: IRecipe) => void;
 }
 
-const SAMPLE_APPLE_CRUMB_CAKE = `Oh, let me think... right, the secret apple crumb cake. Your grandfather absolutely loved this back in the winter of 1974 when we lived in that drafty little apartment on 4th street. Let's see... you need apples, obviously. Grab about four granny smith apples. Or honeycrisp! Honeycrisp works if you like it sweeter.
-Chop them up—don't make the pieces too small, you want to bite into them. Wait, before you do that, preheat the oven to 350 degrees. Oh! I forgot, make sure you throw in a cup of brown sugar and a solid tablespoon of cinnamon over the apples while they sit.
-The apartment was so cold that the butter was always hard as a rock, so we learned to melt a stick of unsalted butter completely before mixing it into the flour for the crumble topping. That's one cup of flour, by the way. Mix it until it looks like wet sand. Bake it for forty-five minutes. Or until it smells like heaven. We used to eat it hot while watching the snow fall outside.`;
-
 export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onRecipeCreated }) => {
   const [activeMode, setActiveMode] = useState<'mic' | 'file' | 'text' | 'samples'>('mic');
 
@@ -496,35 +492,31 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onRecipeCreated })
                   Paste Oral Story, Voice Transcript, or Family Recipe
                 </h3>
                 <p className="text-xs text-[#705335] italic font-serif">
-                  Paste verbatim memories or recipes—Gemma will learn the mechanics, calculate metric/imperial units, and preserve the memories.
+                  Paste verbatim spoken memories or typed recipe text—the AI pipeline will learn the recipe directly from your input.
                 </p>
               </div>
             </div>
 
-            {/* Quick 1-click Sample Loader for the 1974 Apple Crumb Cake */}
-            <button
-              onClick={() => {
-                setPastedText(SAMPLE_APPLE_CRUMB_CAKE);
-                setFamilyMemberHint('Grandmother');
-                setEraHint('Winter of 1974, Drafty 4th Street Apartment');
-              }}
-              className="px-3 py-1.5 bg-[#F3EED9] hover:bg-[#E8DEC0] text-[#4A3525] border border-[#D8C3B1] rounded-xl text-xs font-serif font-bold transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
-              title="Load the 1974 Secret Apple Crumb Cake story"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-[#94442B]" />
-              <span>Load 1974 Apple Crumb Cake Story</span>
-            </button>
+            {pastedText && (
+              <button
+                onClick={() => setPastedText('')}
+                className="px-3 py-1.5 bg-[#FBECE7] hover:bg-[#F5D3C8] text-[#94442B] border border-[#E8A692] rounded-xl text-xs font-serif font-bold transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
+                title="Clear current text"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Clear Text</span>
+              </button>
+            )}
           </div>
 
           <div className="relative">
             <textarea
               value={pastedText}
               onChange={(e) => setPastedText(e.target.value)}
-              rows={8}
-              placeholder="Paste or write the oral food story here...
+              rows={9}
+              placeholder="Paste or type any family recipe story or audio transcript here...
 
-Example:
-'Oh, let me think... right, the secret apple crumb cake. Your grandfather absolutely loved this back in the winter of 1974 when we lived in that drafty little apartment on 4th street. Let's see... you need apples, obviously. Grab about four granny smith apples...'"
+The AI will parse your exact text, discover the dish title, calculate Imperial and Metric measurements for all ingredients mentioned, structure the cooking instructions step-by-step, and preserve any tender memories or family lore included."
               className="w-full p-4 rounded-xl bg-[#FAF7F0] border-2 border-[#D8C3B1] focus:border-[#94442B] focus:outline-none text-[#2C1D11] font-serif text-sm leading-relaxed placeholder-[#705335]/50 resize-y shadow-inner"
             />
           </div>
@@ -533,15 +525,9 @@ Example:
             <span className="font-medium">
               {pastedText.trim() ? `${pastedText.trim().split(/\s+/).length} words entered` : 'Ready for input'}
             </span>
-            {pastedText && (
-              <button
-                onClick={() => setPastedText('')}
-                className="text-[#94442B] hover:underline flex items-center gap-1 font-semibold"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>Clear Text</span>
-              </button>
-            )}
+            <span className="italic text-[#705335]/70">
+              Only learns from what you type or paste above
+            </span>
           </div>
         </div>
       )}

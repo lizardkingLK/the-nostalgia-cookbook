@@ -22,25 +22,28 @@ const isProduction = process.env.NODE_ENV === 'production';
 // Configuration from environment variables
 const MONGODB_URI =
   process.env.MONGODB_URI ||
-  'mongodb+srv://chansanfdo_db_user:3Hz6qP2e1XQRFUcY@cluster0.e0iy2uf.mongodb.net/?appName=Cluster0';
+  'empty';
 
 const GEMMA_API_ENDPOINT =
   process.env.GEMMA_API_ENDPOINT ||
-  'https://openrouter.ai/api/v1/chat/completions';
+  'empty';
 
 const GEMMA_API_KEY =
   process.env.GEMMA_API_KEY ||
-  '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';
+  process.env.OPENROUTER_API_KEY ||
+  'empty';
 
-const GEMMA_MODEL = process.env.GEMMA_MODEL || 'google/gemma-2-27b-it';
+const GEMMA_MODEL =
+  process.env.GEMMA_MODEL || 'empty';
 
 const GEMINI_API_KEY =
   process.env.GEMINI_API_KEY ||
-  'AQ.Ab8RN6ImFY9juWQh6G6nIP9Qu1prxGwoOQ9zfPZ1noLEBbEKPg';
+  process.env.GOOGLE_API_KEY ||
+  'empty';
 
 const NEXTAUTH_URL =
   process.env.NEXTAUTH_URL ||
-  'https://the-nostalgia-cookbook-83vbe.ondigitalocean.app';
+  'empty';
 
 // MongoDB Atlas Connection
 let isMongoConnected = false;
@@ -186,12 +189,17 @@ app.post('/api/auth/signout', (req: Request, res: Response) => {
 
 // Check Gemma / Inference Status
 app.get('/api/gemma-status', async (req: Request, res: Response) => {
+  const isUsingOpenRouter = GEMMA_API_ENDPOINT.includes('openrouter.ai');
+  const hasGemmaKey = Boolean(GEMMA_API_KEY && GEMMA_API_KEY.trim().length > 0);
+  const hasGeminiKey = Boolean(GEMINI_API_KEY && GEMINI_API_KEY.trim().length > 0);
+  const isGeminiFormatValid = hasGeminiKey && GEMINI_API_KEY.startsWith('AIzaSy');
+
   let isConnected = false;
   let statusDetail = '';
 
-  if (GEMMA_API_ENDPOINT.includes('openrouter.ai')) {
-    isConnected = true;
-    statusDetail = `Active OpenRouter Inference (Model: ${GEMMA_MODEL})`;
+  if (isUsingOpenRouter) {
+    isConnected = hasGemmaKey;
+    statusDetail = `OpenRouter Hosted (${GEMMA_MODEL})`;
   } else {
     try {
       const controller = new AbortController();
@@ -209,9 +217,17 @@ app.get('/api/gemma-status', async (req: Request, res: Response) => {
   res.json({
     endpoint: GEMMA_API_ENDPOINT,
     model: GEMMA_MODEL,
+    provider: isUsingOpenRouter ? 'OpenRouter Cloud' : 'Local / Custom Server',
+    isOpenRouter: isUsingOpenRouter,
+    hasGemmaKey,
+    hasGeminiKey,
+    isGeminiFormatValid,
+    gemmaKeyMasked: hasGemmaKey ? `${GEMMA_API_KEY.slice(0, 8)}...${GEMMA_API_KEY.slice(-4)}` : 'Not Set',
+    geminiKeyMasked: hasGeminiKey ? `${GEMINI_API_KEY.slice(0, 6)}...${GEMINI_API_KEY.slice(-4)}` : 'Not Set',
     localOllamaConnected: isConnected,
     gemmaModelAvailable: isConnected,
     cloudFallbackActive: true,
+    mongoConnected: isMongoConnected,
     message: statusDetail,
   });
 });
@@ -455,64 +471,6 @@ Provide only the verbatim transcript.`;
 function extractOfflineHeirloom(transcript: string, familyHint?: string, eraHint?: string) {
   const lower = transcript.toLowerCase();
 
-  if (lower.includes('apple crumb') || (lower.includes('crumb') && lower.includes('apple')) || lower.includes('granny smith')) {
-    return {
-      title: "Grandmother's Secret Apple Crumb Cake",
-      category: 'Desserts & Sweets',
-      prepTime: '20 mins',
-      cookTime: '45 mins',
-      servings: '8 servings',
-      servingsCount: 8,
-      difficulty: 'Easy',
-      ingredients: [
-        { item: 'Granny Smith or Honeycrisp Apples', imperial: '4 medium apples, chopped into bite-sized chunks', metric: '600 g', notes: "Don't chop too small so you can bite into them" },
-        { item: 'Dark Brown Sugar', imperial: '1 cup', metric: '200 g', notes: 'Tossed over apples while they sit' },
-        { item: 'Ground Cinnamon', imperial: '1 solid tbsp', metric: '8 g' },
-        { item: 'Unsalted Sweet Cream Butter', imperial: '1 stick (1/2 cup), completely melted', metric: '115 g', notes: 'Melted thoroughly to overcome cold winter drafts' },
-        { item: 'All-Purpose Flour', imperial: '1 cup', metric: '130 g', notes: 'Mixed with melted butter till like wet sand' },
-      ],
-      instructions: [
-        {
-          stepNumber: 1,
-          instruction: 'Preheat the oven to 350°F (175°C).',
-          tip: 'Preheat early so the oven heats the chilly winter kitchen.'
-        },
-        {
-          stepNumber: 2,
-          instruction: "Chop 4 Granny Smith (or Honeycrisp) apples into hearty chunks—don't make them too small so you can bite into them.",
-        },
-        {
-          stepNumber: 3,
-          instruction: 'Toss the chopped apples in a bowl with 1 cup of brown sugar and 1 solid tablespoon of ground cinnamon while they sit.',
-        },
-        {
-          stepNumber: 4,
-          instruction: 'Completely melt 1 stick of unsalted butter in a small pan.',
-          tip: "Grandma's Trick: 'The apartment was so cold that the butter was hard as a rock, so we learned to melt it completely.'"
-        },
-        {
-          stepNumber: 5,
-          instruction: 'Mix the melted butter into 1 cup of flour with a fork until it resembles coarse wet sand.',
-        },
-        {
-          stepNumber: 6,
-          instruction: 'Transfer the spiced apples to a baking dish, scatter the crumb topping evenly over the fruit, and bake for 45 minutes, or until it smells like heaven. Serve piping hot while watching the snow fall.',
-        }
-      ],
-      nostalgia: {
-        summary: 'Your grandfather absolutely loved this back in the winter of 1974 when they lived in that drafty little apartment on 4th street.',
-        anecdotes: [
-          'The apartment on 4th street was so cold that butter was always hard as a rock, prompting the melted butter crumble technique.',
-          'They used to eat it hot straight out of the oven while watching the snow fall outside on 4th street.'
-        ],
-        familyMembersMentioned: ['Grandmother', 'Grandfather'],
-        historicalContext: eraHint || 'Winter of 1974, Drafty 4th Street Apartment',
-        emotionalTone: 'Cozy, nostalgic, romantic, comforting',
-        secretFamilyTip: 'Melt the stick of butter completely before stirring into the flour so the crumble has that perfect wet sand texture.'
-      }
-    };
-  }
-
   if (lower.includes('peach cobbler') || lower.includes('elberta peaches') || familyHint?.toLowerCase().includes('mae')) {
     return {
       title: "Auntie Mae's Cast Iron Bourbon Peach Cobbler",
@@ -695,30 +653,181 @@ function extractOfflineHeirloom(transcript: string, familyHint?: string, eraHint
     };
   }
 
-  // Fallback heuristic for custom recording
-  return {
-    title: familyHint ? `${familyHint}'s Cherished Recipe` : 'Family Heirloom Recipe',
-    category: 'Sunday Dinners',
-    prepTime: '20 mins',
-    cookTime: '40 mins',
-    servings: '4-6 servings',
-    servingsCount: 6,
-    difficulty: 'Medium',
-    ingredients: [
-      { item: 'Primary Recipe Base Ingredients', imperial: 'To taste', metric: 'To taste', notes: 'Per oral recollection' }
-    ],
-    instructions: [
-      { stepNumber: 1, instruction: 'Measure and combine ingredients according to oral memories.' },
-      { stepNumber: 2, instruction: 'Simmer gently until flavors marry, adjusting seasoning as remembered.' }
-    ],
-    nostalgia: {
-      summary: transcript.slice(0, 150) + '...',
-      anecdotes: [transcript.slice(0, 200)],
-      familyMembersMentioned: familyHint ? [familyHint] : ['Family'],
-      historicalContext: eraHint || 'Family oral archive',
-      emotionalTone: 'Warm, heartfelt',
-      secretFamilyTip: 'Cook with patience and honor the family tradition.'
+  // Dynamic heuristic learner from whatever input text is submitted
+  // 1. Discover Title directly from input text
+  let discoveredTitle = '';
+  const titlePatterns = [
+    /(?:the\s+secret|my\s+favorite|our\s+favorite|cherished|special|famous)\s+([a-zA-Z\s]{4,35}?)(?:\.|\,|back|when|recipe|for|is|in|that)/i,
+    /([a-zA-Z\s]{4,30}?)(?:\s+recipe|\s+cake|\s+pie|\s+stew|\s+soup|\s+roast|\s+bread|\s+cookies|\s+pudding|\s+cobbler|\s+chili)/i,
+  ];
+  for (const regex of titlePatterns) {
+    const match = transcript.match(regex);
+    if (match && match[1] && match[1].trim().length > 3) {
+      discoveredTitle = match[1].trim();
+      break;
     }
+  }
+
+  if (discoveredTitle) {
+    discoveredTitle = discoveredTitle
+      .split(' ')
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(' ');
+    if (familyHint && !discoveredTitle.toLowerCase().includes(familyHint.toLowerCase())) {
+      discoveredTitle = `${familyHint}'s ${discoveredTitle}`;
+    }
+  } else {
+    discoveredTitle = familyHint ? `${familyHint}'s Heirloom Recipe` : 'Family Heirloom Recipe';
+  }
+
+  // 2. Discover Category from text keywords
+  let dynamicCategory = 'Sunday Dinners';
+  if (/(?:cake|crumb|pie|cookie|sweet|dessert|sugar|cinnamon|apple|peach|berry|frosting)/i.test(lower)) {
+    dynamicCategory = 'Desserts & Sweets';
+  } else if (/(?:bread|flour|dough|baking|rolls|yeast|loaf|crust)/i.test(lower)) {
+    dynamicCategory = 'Baking & Breads';
+  } else if (/(?:soup|stew|broth|chili|chowder|potage)/i.test(lower)) {
+    dynamicCategory = 'Soups & Stews';
+  } else if (/(?:thanksgiving|christmas|easter|holiday|tradition)/i.test(lower)) {
+    dynamicCategory = 'Holiday Traditions';
+  } else if (/(?:jam|preserve|pickl|relish|canned|jelly)/i.test(lower)) {
+    dynamicCategory = 'Preserves & Relishes';
+  }
+
+  // 3. Split transcript into sentences
+  const rawSentences = transcript
+    .split(/(?<=[.?!])\s+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 5);
+
+  // 4. Dynamically extract ingredients mentioned in text
+  const dynamicIngredients: Array<{ item: string; imperial: string; metric: string; notes?: string }> = [];
+  for (const sent of rawSentences) {
+    if (
+      /(?:cup|cups|tablespoon|tbsp|teaspoon|tsp|stick|sticks|pound|lbs|apples?|sugar|cinnamon|butter|flour|salt|pepper|oil|milk|eggs?|meat|beef|chicken|pork|onion|garlic|rice|peaches|vanilla|chocolate)/i.test(
+        sent
+      )
+    ) {
+      // Find food segments with numbers or quantities
+      const foodMatches = sent.matchAll(
+        /(?:grab|need|throw in|mix in|add|melt|use|take)?\s*([a-z0-9\/\s]+(?:cups?|tablespoons?|tbsp|teaspoons?|tsp|sticks?|pounds?|lbs?|oz|ounces?)?\s+(?:of\s+)?[a-z\s]+?)(?:[,.]|\s+before|\s+while|\s+into|\s+for|\s+over|$)/gi
+      );
+      for (const m of foodMatches) {
+        const phrase = m[1]?.trim();
+        if (
+          phrase &&
+          phrase.length > 4 &&
+          phrase.length < 55 &&
+          !dynamicIngredients.some((i) => i.item.toLowerCase() === phrase.toLowerCase())
+        ) {
+          const numMatch = phrase.match(
+            /^([0-9\/\s]+|one|two|three|four|five|six|half|a|about\s+\w+)?\s*(cups?|tablespoons?|tbsp|teaspoons?|tsp|sticks?|pounds?|lbs?|oz)?\s*(?:of\s+)?(.*)$/i
+          );
+          const imperial =
+            numMatch && (numMatch[1] || numMatch[2])
+              ? `${numMatch[1] || ''} ${numMatch[2] || ''}`.trim()
+              : 'As needed';
+          const itemName = numMatch && numMatch[3] ? numMatch[3].trim() : phrase;
+
+          let metric = 'As required';
+          if (/cup/i.test(imperial)) metric = 'approx. 120-200 g';
+          else if (/tbsp/i.test(imperial)) metric = '15 ml / 15 g';
+          else if (/tsp/i.test(imperial)) metric = '5 g';
+          else if (/stick/i.test(imperial)) metric = '115 g';
+          else if (/pound|lb/i.test(imperial)) metric = '450 g';
+
+          if (itemName.length > 2 && !/^(the|that|this|it|you|we|and|or|them)$/i.test(itemName)) {
+            dynamicIngredients.push({
+              item: itemName
+                .split(' ')
+                .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+                .join(' '),
+              imperial: imperial || 'To taste',
+              metric,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  if (dynamicIngredients.length === 0) {
+    dynamicIngredients.push({
+      item: 'Recipe ingredients specified in input',
+      imperial: 'Per preparation notes',
+      metric: 'To taste',
+    });
+  }
+
+  // 5. Dynamically extract cooking instructions from actionable sentences
+  const dynamicInstructions: Array<{ stepNumber: number; instruction: string; tip?: string }> = [];
+  let stepCounter = 1;
+  for (const sent of rawSentences) {
+    if (
+      /(?:preheat|oven|chop|cut|slice|peel|melt|mix|whisk|toss|throw|pour|bake|simmer|boil|stir|cook|heat|scatter|serve|degrees|wait)/i.test(
+        sent
+      )
+    ) {
+      dynamicInstructions.push({
+        stepNumber: stepCounter++,
+        instruction: sent.replace(/^(Oh!|Wait,|Let's see\.\.\.|And|Also)\s*/i, '').trim(),
+      });
+    }
+  }
+
+  if (dynamicInstructions.length === 0) {
+    dynamicInstructions.push(
+      { stepNumber: 1, instruction: 'Prepare ingredients according to the oral voice notes.' },
+      { stepNumber: 2, instruction: 'Simmer or bake slowly until fragrant, checking seasoning.' }
+    );
+  }
+
+  // 6. Dynamically extract Nostalgia, anecdotes, and memories from text
+  const nostalgiaSentences: string[] = [];
+  for (const sent of rawSentences) {
+    if (
+      /(?:grandfather|grandmother|grandma|grandpa|mother|father|mom|dad|uncle|aunt|apartment|winter|summer|19\d\d|20\d\d|remember|loved|used to|snow|cold|hot|outside|street|years? ago|little|heaven)/i.test(
+        sent
+      )
+    ) {
+      nostalgiaSentences.push(sent);
+    }
+  }
+
+  const membersFound = new Set<string>();
+  if (familyHint) membersFound.add(familyHint);
+  if (/grandfather|grandpa/i.test(transcript)) membersFound.add('Grandfather');
+  if (/grandmother|grandma/i.test(transcript)) membersFound.add('Grandmother');
+  if (/mother|mom/i.test(transcript)) membersFound.add('Mother');
+  if (/father|dad/i.test(transcript)) membersFound.add('Father');
+  if (/uncle/i.test(transcript)) membersFound.add('Uncle');
+  if (/aunt/i.test(transcript)) membersFound.add('Aunt');
+
+  const eraMatch =
+    transcript.match(/(?:winter|summer|fall|spring|year|in|decade)\s+(?:of\s+)?(\d{4})/i) ||
+    transcript.match(/\b(19\d\d|20\d\d)\b/);
+  const detectedEra = eraHint || (eraMatch ? eraMatch[0] : 'Family oral kitchen archive');
+
+  return {
+    title: discoveredTitle,
+    category: dynamicCategory,
+    prepTime: '20 mins',
+    cookTime: '45 mins',
+    servings: '6-8 servings',
+    servingsCount: 8,
+    difficulty: 'Medium',
+    ingredients: dynamicIngredients.slice(0, 10),
+    instructions: dynamicInstructions.slice(0, 8),
+    nostalgia: {
+      summary: nostalgiaSentences[0] || transcript.slice(0, 160) + '...',
+      anecdotes: nostalgiaSentences.length > 0 ? nostalgiaSentences.slice(0, 4) : [transcript.slice(0, 200)],
+      familyMembersMentioned: Array.from(membersFound),
+      historicalContext: detectedEra,
+      emotionalTone: 'Warm, authentic, nostalgic',
+      secretFamilyTip:
+        dynamicInstructions[dynamicInstructions.length - 1]?.instruction ||
+        'Prepared with care according to the original family memories.',
+    },
   };
 }
 
@@ -980,7 +1089,11 @@ app.post('/api/tts', async (req: Request, res: Response) => {
     }
 
     if (!ai) {
-      res.status(500).json({ error: 'Gemini API not configured.' });
+      res.json({
+        success: false,
+        fallbackToBrowser: true,
+        message: 'Gemini API not configured, using browser voice.',
+      });
       return;
     }
 
@@ -1011,7 +1124,11 @@ app.post('/api/tts', async (req: Request, res: Response) => {
 
     const base64Audio = ttsResponse.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
     if (!base64Audio) {
-      res.status(500).json({ error: 'No audio generated by TTS model.' });
+      res.json({
+        success: false,
+        fallbackToBrowser: true,
+        message: 'No audio generated by TTS model, using browser voice.',
+      });
       return;
     }
 
@@ -1020,9 +1137,11 @@ app.post('/api/tts', async (req: Request, res: Response) => {
       audioData: `data:audio/wav;base64,${base64Audio}`,
     });
   } catch (error: unknown) {
-    console.error('TTS Narration Error:', error);
-    res.status(500).json({
-      error: (error as Error).message || 'Failed to generate voice narration.',
+    console.warn('TTS Narration cloud warning (falling back to browser speech):', (error as Error).message);
+    res.json({
+      success: false,
+      fallbackToBrowser: true,
+      message: 'Cloud TTS unavailable, using browser speech synthesis.',
     });
   }
 });
