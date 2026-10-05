@@ -1,4 +1,4 @@
-import { cleanAndParseGemmaResponse, ParsedGemmaOutput } from '../src/lib/gemma';
+import { cleanAndParseGemmaResponse, ParsedGemmaOutput, sanitizeRecipeTitle } from '../src/lib/gemma';
 
 // Test runner for parser and data validation
 function runTests() {
@@ -108,7 +108,18 @@ function runTests() {
     assert(false, `Test 3 failed with error: ${(e as Error).message}`);
   }
 
-  // Test 4: Rejection of invalid structures
+  // Test 4: Truncated possessive recovery (e.g., "S Real Sunday" -> "Rose's Real Sunday Pot Roast")
+  try {
+    const transcript = "If you want to make Rose's real Sunday pot roast, the kind that filled the house during the blizzard of 1968...";
+    const recovered = sanitizeRecipeTitle("S Real Sunday", transcript);
+    assert(recovered.includes("Rose's"), "Recovers truncated possessive name Rose's from transcript");
+    assert(recovered.includes("Sunday"), "Preserves Sunday in title");
+    assert(recovered.includes("Pot Roast"), "Adds missing dish noun Pot Roast");
+  } catch (e) {
+    assert(false, `Test 4 failed with error: ${(e as Error).message}`);
+  }
+
+  // Test 5: Rejection of invalid structures
   try {
     const invalidJson = '{"foo": "bar"}';
     cleanAndParseGemmaResponse(invalidJson);

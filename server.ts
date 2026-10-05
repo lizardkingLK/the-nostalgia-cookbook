@@ -9,6 +9,7 @@ import mongoose from 'mongoose';
 import { Recipe } from './models/Recipe.js';
 import { User } from './models/User.js';
 import { IRecipe } from './src/types/recipe.js';
+import { sanitizeRecipeTitle } from './src/lib/gemma.js';
 
 dotenv.config();
 
@@ -654,25 +655,34 @@ function extractOfflineHeirloom(transcript: string, familyHint?: string, eraHint
   }
 
   // Dynamic heuristic learner from whatever input text is submitted
-  // 1. Discover Title directly from input text (prevent generic garbage like "Occasion")
+  // 1. Discover Title directly from input text (prevent generic garbage like "Occasion" and recover truncated possessives like "S Real Sunday")
   let discoveredTitle = '';
-  
-  // High-priority match: Person's specific dish (e.g. "Rose's real Sunday Pot Roast")
-  const personDishMatch = transcript.match(/([A-Z][a-z]+'s\s+(?:real\s+|famous\s+|secret\s+|cherished\s+)?(?:Sunday\s+)?[A-Z][a-zA-Z\s]{3,35}?(?:Pot\s+Roast|Roast|Cake|Pie|Stew|Soup|Chili|Cobbler|Bread|Casserole|Chicken|Brisket))/i);
-  if (personDishMatch && personDishMatch[1]) {
-    discoveredTitle = personDishMatch[1].replace(/\s+real\s+/i, ' ').trim();
+  const normTranscript = transcript.replace(/[’‘`]/g, "'");
+
+  // Priority A: Action phrases like "making Rose's real Sunday..." or "how to make Grandma's..."
+  const actionPhraseMatch = normTranscript.match(/(?:making|make|cooking|cook|baking|bake|preparing|prepare)\s+([a-zA-Z0-9'\-\s]{3,45}?)(?:\.|\,|back|when|recipe|for|is|in|that|the\s+kind)/i);
+  if (actionPhraseMatch && actionPhraseMatch[1]) {
+    discoveredTitle = actionPhraseMatch[1].trim();
   }
 
+  // Priority B: Named dishes like "Rose's real Sunday Pot Roast"
+  if (!discoveredTitle) {
+    const personDishMatch = normTranscript.match(/([a-zA-Z]+'s\s+(?:real\s+|famous\s+|secret\s+|cherished\s+)?(?:Sunday\s+)?[a-zA-Z0-9'\-\s]{3,35}?(?:Pot\s+Roast|Roast|Cake|Pie|Stew|Soup|Chili|Cobbler|Bread|Casserole|Chicken|Brisket))/i);
+    if (personDishMatch && personDishMatch[1]) {
+      discoveredTitle = personDishMatch[1].trim();
+    }
+  }
+
+  // Priority C: Discovered patterns with apostrophe allowed
   if (!discoveredTitle) {
     const titlePatterns = [
-      /(?:the\s+secret|my\s+favorite|our\s+favorite|cherished|special|famous)\s+([a-zA-Z\s]{4,35}?)(?:\.|\,|back|when|recipe|for|is|in|that)/i,
-      /([a-zA-Z\s]{4,30}?)(?:\s+recipe|\s+cake|\s+pie|\s+stew|\s+soup|\s+roast|\s+pot\s+roast|\s+bread|\s+cookies|\s+pudding|\s+cobbler|\s+chili)/i,
+      /(?:the\s+secret|my\s+favorite|our\s+favorite|cherished|special|famous)\s+([a-zA-Z0-9'\-\s]{4,35}?)(?:\.|\,|back|when|recipe|for|is|in|that)/i,
+      /([a-zA-Z0-9'\-\s]{4,30}?)(?:\s+recipe|\s+cake|\s+pie|\s+stew|\s+soup|\s+roast|\s+pot\s+roast|\s+bread|\s+cookies|\s+pudding|\s+cobbler|\s+chili)/i,
     ];
     for (const regex of titlePatterns) {
-      const match = transcript.match(regex);
+      const match = normTranscript.match(regex);
       if (match && match[1] && match[1].trim().length > 3) {
         const candidate = match[1].trim();
-        // Discard generic non-recipe words
         if (!/^(occasion|setting|recipe|dinner|food|kitchen|story|memories|things?)$/i.test(candidate)) {
           discoveredTitle = candidate;
           break;
@@ -681,24 +691,8 @@ function extractOfflineHeirloom(transcript: string, familyHint?: string, eraHint
     }
   }
 
-  // Check if title is still invalid or generic
-  if (!discoveredTitle || /^(occasion|setting|recipe|dinner|food|kitchen|story|memories|things?)$/i.test(discoveredTitle)) {
-    if (familyHint) {
-      discoveredTitle = `${familyHint}'s Sunday Pot Roast`;
-    } else if (/pot roast|roast/i.test(transcript)) {
-      discoveredTitle = /Rose/i.test(transcript) ? "Rose's Sunday Pot Roast" : "Sunday Pot Roast";
-    } else {
-      discoveredTitle = familyHint ? `${familyHint}'s Heirloom Recipe` : 'Family Heirloom Recipe';
-    }
-  } else {
-    discoveredTitle = discoveredTitle
-      .split(' ')
-      .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-      .join(' ');
-    if (familyHint && !discoveredTitle.toLowerCase().includes(familyHint.toLowerCase())) {
-      discoveredTitle = `${familyHint}'s ${discoveredTitle}`;
-    }
-  }
+  // Sanitize and recover truncated names
+  discoveredTitle = sanitizeRecipeTitle(discoveredTitle, normTranscript, familyHint);
 
   // 2. Discover Category from text keywords
   let dynamicCategory = 'Sunday Dinners';
@@ -1081,17 +1075,8 @@ ${eraHint ? `User note - Era/Decade: ${eraHint}` : ''}
 
     const userEmail = currentServerSession?.email || 'family@heirloom.local';
 
-    // Clean title - reject generic non-titles like "Occasion"
-    let title = String(recipeData.title || '').trim();
-    if (!title || /^(occasion|setting|recipe|dinner|food|kitchen|story|memories|things?)$/i.test(title)) {
-      if (familyMemberHint) {
-        title = `${familyMemberHint}'s Family Recipe`;
-      } else if (/pot roast|roast/i.test(transcript)) {
-        title = /Rose/i.test(transcript) ? "Rose's Sunday Pot Roast" : "Sunday Pot Roast";
-      } else {
-        title = 'Beloved Family Recipe';
-      }
-    }
+    // Clean and recover title (recovers truncated possessives like "S Real Sunday" -> "Rose's Real Sunday Pot Roast")
+    let title = sanitizeRecipeTitle(recipeData.title, transcript, familyMemberHint);
 
     // Process ingredients with clean mapping and pronoun removal
     const rawIngs = Array.isArray(recipeData.ingredients) ? recipeData.ingredients : [];
