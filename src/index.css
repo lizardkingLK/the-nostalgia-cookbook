@@ -1,0 +1,103 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --cream-50: #FDFCF7;
+    --cream-100: #FAF7F0;
+    --cream-200: #F3EED9;
+    --cream-300: #E8DEC0;
+
+    --sepia-100: #F5EFEB;
+    --sepia-200: #E6D8CC;
+    --sepia-300: #D8C3B1;
+    --sepia-500: #705335;
+    --sepia-700: #4A3525;
+    --sepia-900: #2C1D11;
+
+    --sage-100: #E7ECE8;
+    --sage-200: #D0DBD2;
+    --sage-500: #607D68;
+    --sage-700: #3F5645;
+
+    --terracotta-100: #FBECE7;
+    --terracotta-200: #F5D3C8;
+    --terracotta-500: #C86446;
+    --terracotta-700: #94442B;
+  }
+
+  body {
+    background-color: #FAF7F0;
+    color: #2C1D11;
+    font-family: 'Merriweather', Georgia, serif;
+    background-image: radial-gradient(#E8DEC0 0.75px, transparent 0.75px);
+    background-size: 24px 24px;
+  }
+}
+
+.font-serif {
+  font-family: 'Merriweather', Georgia, serif;
+}
+
+.font-display {
+  font-family: 'Playfair Display', Georgia, serif;
+}
+
+.font-handwriting {
+  font-family: 'Caveat', cursive, serif;
+}
+
+/* Custom shadows */
+.shadow-recipe-card {
+  box-shadow: 0 10px 30px -4px rgba(74, 53, 37, 0.12), 0 4px 10px -2px rgba(74, 53, 37, 0.08);
+}
+
+.shadow-vintage-inset {
+  box-shadow: inset 0 2px 5px 0 rgba(44, 29, 17, 0.09);
+}
+
+.shadow-wooden-box {
+  box-shadow: 0 18px 45px -8px rgba(44, 29, 17, 0.28), 0 6px 14px -3px rgba(44, 29, 17, 0.15);
+}
+
+/* Aged paper texture effect */
+.paper-texture {
+  background-color: #FAF7F0;
+  background-image: linear-gradient(0deg, rgba(232, 222, 192, 0.2) 1px, transparent 1px);
+  background-size: 100% 28px;
+}
+
+/* Print Stylesheet */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #111111 !important;
+    font-size: 11pt !important;
+  }
+
+  .no-print,
+  nav,
+  header.app-header,
+  footer,
+  button,
+  .print-hidden {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  .shadow-recipe-card,
+  .shadow-wooden-box,
+  .shadow-vintage-inset {
+    box-shadow: none !important;
+  }
+
+  .print-page {
+    border: 2px solid #555555 !important;
+    padding: 24px !important;
+    margin: 0 !important;
+    page-break-after: avoid;
+    break-inside: avoid;
+  }
+}

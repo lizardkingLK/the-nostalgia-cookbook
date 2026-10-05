@@ -1,0 +1,35 @@
+# Dependency directories
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Next.js and build output
+.next/
+dist/
+out/
+build/
+
+# Git metadata
+.git/
+.gitignore
+
+# Environment files with local secrets
+.env*.local
+.env.development
+.env.test
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+*.pem
+
+# Test & coverage artifacts
+coverage/
+.nyc_output/
+
+# Docker build files
+Dockerfile
+docker-compose*.yml
+.dockerignore

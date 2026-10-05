@@ -1,0 +1,6 @@
+{
+  "name": "The Nostalgia Cookbook",
+  "description": "Heirloom family recipe archivist turning oral food stories and rambling voice recordings into structured kitchen recipe cards and nostalgic memory journals.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

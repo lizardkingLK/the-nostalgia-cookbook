@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  nostalgia-app:
+    container_name: nostalgia-cookbook
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+
+      # Authentication Configuration
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+
+      # MongoDB Atlas Cloud Database URI
+      - MONGODB_URI=${MONGODB_URI}
+
+      # Google Gemini 3.5/Flash SDK Key (Multimodal Audio Ingestion)
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+
+      # DigitalOcean GPU Droplet Gemma Endpoint (Ollama / vLLM)
+      # In DigitalOcean VPC: http://<DROOLET_PRIVATE_VPC_IP>:11434/api/generate
+      # External Secure: https://gemma.your-family-domain.com/api/generate
+      - GEMMA_API_ENDPOINT=${GEMMA_API_ENDPOINT:-http://host.docker.internal:11434/api/generate}
+      - GEMMA_MODEL=${GEMMA_MODEL:-gemma2:9b}
+
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - nostalgia-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+networks:
+  nostalgia-network:
+    driver: bridge

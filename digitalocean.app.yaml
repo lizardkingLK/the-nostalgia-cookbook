@@ -1,0 +1,76 @@
+# -----------------------------------------------------------------------------
+# DigitalOcean App Platform Specification
+# Application: Nostalgia Cookbook (Full-Stack Containerized App)
+# -----------------------------------------------------------------------------
+name: nostalgia-cookbook
+region: nyc
+
+services:
+  - name: web
+    dockerfile_path: Dockerfile
+    source_dir: /
+
+    # DigitalOcean App Platform scaling tier
+    instance_count: 1
+    instance_size_slug: basic-xs
+
+    http_port: 3000
+
+    routes:
+      - path: /
+
+    health_check:
+      http_path: /api/health
+      initial_delay_seconds: 15
+      period_seconds: 15
+      timeout_seconds: 5
+      failure_threshold: 3
+
+    envs:
+      - key: NODE_ENV
+        value: production
+        scope: RUN_AND_BUILD_TIME
+
+      - key: PORT
+        value: "3000"
+        scope: RUN_TIME
+
+      # Dynamic App URL injected automatically by DigitalOcean App Platform
+      - key: NEXTAUTH_URL
+        value: ${APP_URL}
+        scope: RUN_TIME
+
+      # NextAuth.js Secret (generate via `openssl rand -base64 32`)
+      - key: NEXTAUTH_SECRET
+        type: SECRET
+        scope: RUN_TIME
+
+      # Google OAuth 2.0 Credentials
+      - key: GOOGLE_CLIENT_ID
+        type: SECRET
+        scope: RUN_TIME
+
+      - key: GOOGLE_CLIENT_SECRET
+        type: SECRET
+        scope: RUN_TIME
+
+      # MongoDB Atlas Cloud Database URI
+      - key: MONGODB_URI
+        type: SECRET
+        scope: RUN_TIME
+
+      # Google Gemini AI Key (for multimodal audio ingestion)
+      - key: GEMINI_API_KEY
+        type: SECRET
+        scope: RUN_TIME
+
+      # DigitalOcean GPU Droplet Gemma Inference Endpoint
+      # Format 1 (VPC Private IP): http://10.116.0.X:11434/api/generate
+      # Format 2 (HTTPS with Reverse Proxy/Caddy/Cloudflare): https://gemma.yourdomain.com/api/generate
+      - key: GEMMA_API_ENDPOINT
+        type: SECRET
+        scope: RUN_TIME
+
+      - key: GEMMA_MODEL
+        value: gemma2:9b
+        scope: RUN_TIME
