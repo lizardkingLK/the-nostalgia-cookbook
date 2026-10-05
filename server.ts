@@ -455,6 +455,64 @@ Provide only the verbatim transcript.`;
 function extractOfflineHeirloom(transcript: string, familyHint?: string, eraHint?: string) {
   const lower = transcript.toLowerCase();
 
+  if (lower.includes('apple crumb') || (lower.includes('crumb') && lower.includes('apple')) || lower.includes('granny smith')) {
+    return {
+      title: "Grandmother's Secret Apple Crumb Cake",
+      category: 'Desserts & Sweets',
+      prepTime: '20 mins',
+      cookTime: '45 mins',
+      servings: '8 servings',
+      servingsCount: 8,
+      difficulty: 'Easy',
+      ingredients: [
+        { item: 'Granny Smith or Honeycrisp Apples', imperial: '4 medium apples, chopped into bite-sized chunks', metric: '600 g', notes: "Don't chop too small so you can bite into them" },
+        { item: 'Dark Brown Sugar', imperial: '1 cup', metric: '200 g', notes: 'Tossed over apples while they sit' },
+        { item: 'Ground Cinnamon', imperial: '1 solid tbsp', metric: '8 g' },
+        { item: 'Unsalted Sweet Cream Butter', imperial: '1 stick (1/2 cup), completely melted', metric: '115 g', notes: 'Melted thoroughly to overcome cold winter drafts' },
+        { item: 'All-Purpose Flour', imperial: '1 cup', metric: '130 g', notes: 'Mixed with melted butter till like wet sand' },
+      ],
+      instructions: [
+        {
+          stepNumber: 1,
+          instruction: 'Preheat the oven to 350°F (175°C).',
+          tip: 'Preheat early so the oven heats the chilly winter kitchen.'
+        },
+        {
+          stepNumber: 2,
+          instruction: "Chop 4 Granny Smith (or Honeycrisp) apples into hearty chunks—don't make them too small so you can bite into them.",
+        },
+        {
+          stepNumber: 3,
+          instruction: 'Toss the chopped apples in a bowl with 1 cup of brown sugar and 1 solid tablespoon of ground cinnamon while they sit.',
+        },
+        {
+          stepNumber: 4,
+          instruction: 'Completely melt 1 stick of unsalted butter in a small pan.',
+          tip: "Grandma's Trick: 'The apartment was so cold that the butter was hard as a rock, so we learned to melt it completely.'"
+        },
+        {
+          stepNumber: 5,
+          instruction: 'Mix the melted butter into 1 cup of flour with a fork until it resembles coarse wet sand.',
+        },
+        {
+          stepNumber: 6,
+          instruction: 'Transfer the spiced apples to a baking dish, scatter the crumb topping evenly over the fruit, and bake for 45 minutes, or until it smells like heaven. Serve piping hot while watching the snow fall.',
+        }
+      ],
+      nostalgia: {
+        summary: 'Your grandfather absolutely loved this back in the winter of 1974 when they lived in that drafty little apartment on 4th street.',
+        anecdotes: [
+          'The apartment on 4th street was so cold that butter was always hard as a rock, prompting the melted butter crumble technique.',
+          'They used to eat it hot straight out of the oven while watching the snow fall outside on 4th street.'
+        ],
+        familyMembersMentioned: ['Grandmother', 'Grandfather'],
+        historicalContext: eraHint || 'Winter of 1974, Drafty 4th Street Apartment',
+        emotionalTone: 'Cozy, nostalgic, romantic, comforting',
+        secretFamilyTip: 'Melt the stick of butter completely before stirring into the flour so the crumble has that perfect wet sand texture.'
+      }
+    };
+  }
+
   if (lower.includes('peach cobbler') || lower.includes('elberta peaches') || familyHint?.toLowerCase().includes('mae')) {
     return {
       title: "Auntie Mae's Cast Iron Bourbon Peach Cobbler",

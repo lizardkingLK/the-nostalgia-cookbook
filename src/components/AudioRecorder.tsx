@@ -13,7 +13,10 @@ import {
   BookMarked,
   Info,
   Clock,
-  Sparkle
+  Sparkle,
+  FileText,
+  PenTool,
+  Trash2
 } from 'lucide-react';
 import { SAMPLE_AUDIO_STORIES, ISampleStory } from '../data/sampleRecordings';
 import { IRecipe } from '../types/recipe';
@@ -22,8 +25,12 @@ interface AudioRecorderProps {
   onRecipeCreated: (recipe: IRecipe) => void;
 }
 
+const SAMPLE_APPLE_CRUMB_CAKE = `Oh, let me think... right, the secret apple crumb cake. Your grandfather absolutely loved this back in the winter of 1974 when we lived in that drafty little apartment on 4th street. Let's see... you need apples, obviously. Grab about four granny smith apples. Or honeycrisp! Honeycrisp works if you like it sweeter.
+Chop them up—don't make the pieces too small, you want to bite into them. Wait, before you do that, preheat the oven to 350 degrees. Oh! I forgot, make sure you throw in a cup of brown sugar and a solid tablespoon of cinnamon over the apples while they sit.
+The apartment was so cold that the butter was always hard as a rock, so we learned to melt a stick of unsalted butter completely before mixing it into the flour for the crumble topping. That's one cup of flour, by the way. Mix it until it looks like wet sand. Bake it for forty-five minutes. Or until it smells like heaven. We used to eat it hot while watching the snow fall outside.`;
+
 export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onRecipeCreated }) => {
-  const [activeMode, setActiveMode] = useState<'mic' | 'file' | 'samples'>('mic');
+  const [activeMode, setActiveMode] = useState<'mic' | 'file' | 'text' | 'samples'>('mic');
 
   // Mic recording state
   const [isRecording, setIsRecording] = useState(false);
@@ -34,6 +41,9 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onRecipeCreated })
 
   // File upload state
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
+
+  // Textarea input state (Paste Story / Transcript)
+  const [pastedText, setPastedText] = useState<string>('');
 
   // Sample story state
   const [selectedSample, setSelectedSample] = useState<ISampleStory | null>(null);
@@ -189,8 +199,18 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onRecipeCreated })
       let rawTranscript = '';
       let durationSec = recordingSeconds;
 
-      // If user selected a ready sample story:
-      if (selectedSample) {
+      // If user is pasting a story / text transcript:
+      if (activeMode === 'text') {
+        if (!pastedText.trim()) {
+          throw new Error('Please paste or write a story transcript into the text box first.');
+        }
+        setPipelineStage(1);
+        setStatusText('Reading oral story and family memories...');
+        await new Promise((r) => setTimeout(r, 400));
+        rawTranscript = pastedText.trim();
+        durationSec = Math.max(30, Math.round(pastedText.trim().split(/\s+/).length / 2.5));
+      } else if (selectedSample) {
+        // If user selected a ready sample story:
         setPipelineStage(1);
         setStatusText(`Loading verbatim oral transcription for "${selectedSample.title}"...`);
         await new Promise((r) => setTimeout(r, 600));
@@ -221,7 +241,7 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onRecipeCreated })
         const uploadJson = await uploadRes.json();
         rawTranscript = uploadJson.transcript;
       } else {
-        throw new Error('Please record audio, upload a file, or select a sample recording first.');
+        throw new Error('Please record audio, upload a file, paste a story, or select a sample recording first.');
       }
 
       // Stage 2: Private Restructuring via Open-Source Gemma Heritage Restorer
@@ -305,14 +325,14 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onRecipeCreated })
       )}
 
       {/* Mode Selector Tabs */}
-      <div className="flex bg-[#F3EED9] p-1.5 rounded-2xl mb-8 max-w-md mx-auto border border-[#D8C3B1]">
+      <div className="flex flex-wrap sm:flex-nowrap bg-[#F3EED9] p-1.5 rounded-2xl mb-8 max-w-xl mx-auto border border-[#D8C3B1] gap-1">
         <button
           onClick={() => {
             setActiveMode('mic');
             setSelectedSample(null);
           }}
           disabled={isProcessing || isRecording}
-          className={`flex-1 py-2 text-xs sm:text-sm font-serif font-semibold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+          className={`flex-1 min-w-[110px] py-2 text-xs sm:text-sm font-serif font-semibold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
             activeMode === 'mic'
               ? 'bg-[#4A3525] text-[#FAF7F0] shadow-sm'
               : 'text-[#705335] hover:text-[#2C1D11]'
@@ -328,7 +348,7 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onRecipeCreated })
             setSelectedSample(null);
           }}
           disabled={isProcessing || isRecording}
-          className={`flex-1 py-2 text-xs sm:text-sm font-serif font-semibold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+          className={`flex-1 min-w-[110px] py-2 text-xs sm:text-sm font-serif font-semibold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
             activeMode === 'file'
               ? 'bg-[#4A3525] text-[#FAF7F0] shadow-sm'
               : 'text-[#705335] hover:text-[#2C1D11]'
@@ -340,11 +360,28 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onRecipeCreated })
 
         <button
           onClick={() => {
+            setActiveMode('text');
+            setSelectedSample(null);
+            resetRecording();
+          }}
+          disabled={isProcessing || isRecording}
+          className={`flex-1 min-w-[125px] py-2 text-xs sm:text-sm font-serif font-semibold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+            activeMode === 'text'
+              ? 'bg-[#4A3525] text-[#FAF7F0] shadow-sm'
+              : 'text-[#705335] hover:text-[#2C1D11]'
+          }`}
+        >
+          <FileText className="w-4 h-4" />
+          <span>Paste Story</span>
+        </button>
+
+        <button
+          onClick={() => {
             setActiveMode('samples');
             resetRecording();
           }}
           disabled={isProcessing || isRecording}
-          className={`flex-1 py-2 text-xs sm:text-sm font-serif font-semibold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+          className={`flex-1 min-w-[110px] py-2 text-xs sm:text-sm font-serif font-semibold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
             activeMode === 'samples'
               ? 'bg-[#94442B] text-white shadow-sm'
               : 'text-[#705335] hover:text-[#2C1D11]'
@@ -448,7 +485,68 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onRecipeCreated })
         </div>
       )}
 
-      {/* MODE 3: Sample Recordings Library */}
+      {/* MODE 3: Paste Voice Transcript or Actual Recipe (Learn from Textarea) */}
+      {activeMode === 'text' && (
+        <div className="bg-[#FDFCF7] border border-[#D8C3B1] rounded-2xl p-6 sm:p-8 mb-8 shadow-vintage-inset space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#D8C3B1] pb-3">
+            <div className="flex items-center gap-2.5">
+              <PenTool className="w-5 h-5 text-[#94442B]" />
+              <div>
+                <h3 className="text-base sm:text-lg font-display font-bold text-[#2C1D11]">
+                  Paste Oral Story, Voice Transcript, or Family Recipe
+                </h3>
+                <p className="text-xs text-[#705335] italic font-serif">
+                  Paste verbatim memories or recipes—Gemma will learn the mechanics, calculate metric/imperial units, and preserve the memories.
+                </p>
+              </div>
+            </div>
+
+            {/* Quick 1-click Sample Loader for the 1974 Apple Crumb Cake */}
+            <button
+              onClick={() => {
+                setPastedText(SAMPLE_APPLE_CRUMB_CAKE);
+                setFamilyMemberHint('Grandmother');
+                setEraHint('Winter of 1974, Drafty 4th Street Apartment');
+              }}
+              className="px-3 py-1.5 bg-[#F3EED9] hover:bg-[#E8DEC0] text-[#4A3525] border border-[#D8C3B1] rounded-xl text-xs font-serif font-bold transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
+              title="Load the 1974 Secret Apple Crumb Cake story"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-[#94442B]" />
+              <span>Load 1974 Apple Crumb Cake Story</span>
+            </button>
+          </div>
+
+          <div className="relative">
+            <textarea
+              value={pastedText}
+              onChange={(e) => setPastedText(e.target.value)}
+              rows={8}
+              placeholder="Paste or write the oral food story here...
+
+Example:
+'Oh, let me think... right, the secret apple crumb cake. Your grandfather absolutely loved this back in the winter of 1974 when we lived in that drafty little apartment on 4th street. Let's see... you need apples, obviously. Grab about four granny smith apples...'"
+              className="w-full p-4 rounded-xl bg-[#FAF7F0] border-2 border-[#D8C3B1] focus:border-[#94442B] focus:outline-none text-[#2C1D11] font-serif text-sm leading-relaxed placeholder-[#705335]/50 resize-y shadow-inner"
+            />
+          </div>
+
+          <div className="flex items-center justify-between text-xs font-serif text-[#705335] pt-1">
+            <span className="font-medium">
+              {pastedText.trim() ? `${pastedText.trim().split(/\s+/).length} words entered` : 'Ready for input'}
+            </span>
+            {pastedText && (
+              <button
+                onClick={() => setPastedText('')}
+                className="text-[#94442B] hover:underline flex items-center gap-1 font-semibold"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Clear Text</span>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* MODE 4: Sample Recordings Library */}
       {activeMode === 'samples' && (
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-4 text-[#705335] text-xs font-serif">
@@ -573,17 +671,21 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onRecipeCreated })
       </div>
 
       {/* Action / Trigger Button */}
-      {(audioBlob || selectedSample) && !isProcessing && (
+      {((audioBlob || selectedSample) || (activeMode === 'text' && pastedText.trim().length > 0)) && !isProcessing && (
         <div className="text-center">
           <button
             onClick={handleProcessWorkflow}
-            className="w-full sm:w-auto px-8 py-4 bg-[#94442B] hover:bg-[#705335] text-[#FAF7F0] font-serif rounded-2xl font-bold text-base transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-3 mx-auto"
+            className="w-full sm:w-auto px-8 py-4 bg-[#94442B] hover:bg-[#705335] text-[#FAF7F0] font-serif rounded-2xl font-bold text-base transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-3 mx-auto active:scale-95"
           >
             <Sparkles className="w-5 h-5 text-[#E8A692]" />
-            <span>Process Through Hybrid AI Pipeline</span>
+            <span>
+              {activeMode === 'text' ? 'Learn & Archive Recipe From Story' : 'Process Through Hybrid AI Pipeline'}
+            </span>
           </button>
           <p className="text-xs text-[#705335] mt-2 font-serif italic">
-            Gemini Multimodal Transcription &rarr; Open-Source Gemma Heritage Structuring
+            {activeMode === 'text'
+              ? 'Open-Source Gemma Heritage Restorer: Extracting ingredients, instructions, and family lore'
+              : 'Gemini Multimodal Transcription → Open-Source Gemma Heritage Structuring'}
           </p>
         </div>
       )}
