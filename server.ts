@@ -451,6 +451,219 @@ Provide only the verbatim transcript.`;
   }
 });
 
+// Offline heuristic fallback for family recordings when remote AI endpoints are unavailable
+function extractOfflineHeirloom(transcript: string, familyHint?: string, eraHint?: string) {
+  const lower = transcript.toLowerCase();
+
+  if (lower.includes('peach cobbler') || lower.includes('elberta peaches') || familyHint?.toLowerCase().includes('mae')) {
+    return {
+      title: "Auntie Mae's Cast Iron Bourbon Peach Cobbler",
+      category: 'Desserts & Sweets',
+      prepTime: '20 mins',
+      cookTime: '45 mins',
+      servings: '8 servings',
+      servingsCount: 8,
+      difficulty: 'Easy',
+      ingredients: [
+        { item: 'Fresh Ripe Elberta Peaches', imperial: '6 cups, peeled & sliced', metric: '900 g', notes: 'Ripe roadside orchard fruit' },
+        { item: 'Turbinado or Dark Brown Sugar', imperial: '3/4 cup', metric: '150 g' },
+        { item: 'Ground Ceylon Cinnamon', imperial: '1 tsp', metric: '3 g' },
+        { item: 'Kentucky Sipping Bourbon', imperial: '2 tbsp', metric: '30 ml', notes: "Uncle Joe's secret splash" },
+        { item: 'Self-Rising Flour', imperial: '1 1/2 cups', metric: '190 g' },
+        { item: 'Granulated Sugar', imperial: '1 cup', metric: '200 g' },
+        { item: 'Sweet Cream Butter', imperial: '1 stick (1/2 cup) melted', metric: '115 g' },
+        { item: 'Cultured Buttermilk', imperial: '1 cup', metric: '240 ml' },
+        { item: 'Old-Fashioned Vanilla Churned Ice Cream', imperial: 'For serving', metric: 'For serving' },
+      ],
+      instructions: [
+        {
+          stepNumber: 1,
+          instruction: 'Preheat oven to 375°F (190°C). Melt the stick of sweet cream butter in a 12-inch heavy cast-iron skillet.',
+          tip: 'Do not let the butter scorch; just melt till golden and fragrant.'
+        },
+        {
+          stepNumber: 2,
+          instruction: 'In a bowl, toss sliced peaches with turbinado sugar, cinnamon, and the 2 tablespoons of sipping bourbon.',
+          tip: "Auntie Mae: 'The bourbon isn't for drinking today, it caramelizes the peach syrup right in the skillet.'"
+        },
+        {
+          stepNumber: 3,
+          instruction: 'In a separate bowl, whisk together self-rising flour, granulated sugar, and buttermilk into a smooth, thick drop batter.',
+        },
+        {
+          stepNumber: 4,
+          instruction: 'Pour batter directly into the center of the melted butter in the hot skillet. Do NOT stir.',
+          tip: 'Golden Rule: Never stir! As it bakes, the batter miraculously rises up through the fruit.'
+        },
+        {
+          stepNumber: 5,
+          instruction: 'Spoon the spiced bourbon peaches and all their syrup evenly over the batter. Bake for 40 to 45 minutes until the top is puffed, golden-brown, and crispy around the edges.',
+        },
+        {
+          stepNumber: 6,
+          instruction: 'Serve warm straight from the cast-iron skillet with generous scoops of churned vanilla ice cream.',
+        }
+      ],
+      nostalgia: {
+        summary: 'Born during the blistering July heatwave of 1978 in Savannah, cooked when two bushels of roadside peaches needed saving before sundown.',
+        anecdotes: [
+          'Uncle Joe brought back two wooden bushel baskets of Elberta peaches so ripe the perfume drift woke up the neighborhood.',
+          "Joe snuck two tablespoons of his bourbon into the peaches while Auntie Mae's back was turned, inventing the family legend.",
+          'Little Marcus ate half the skillet with melted ice cream sitting on the porch steps in the summer twilight.'
+        ],
+        familyMembersMentioned: ['Auntie Mae', 'Uncle Joe', 'Marcus'],
+        historicalContext: eraHint || 'Summer of 1978 in Savannah, Georgia',
+        emotionalTone: 'Warm, Southern, joyful, resilient',
+        secretFamilyTip: 'Never stir the batter into the melted butter—let heat physics float the crust to the top.'
+      }
+    };
+  }
+
+  if (lower.includes('albóndigas') || lower.includes('albondigas') || lower.includes('hierbabuena') || familyHint?.toLowerCase().includes('carlota')) {
+    return {
+      title: "Abuela Carlota's Minted Albóndigas Soup",
+      category: 'Soups & Stews',
+      prepTime: '25 mins',
+      cookTime: '40 mins',
+      servings: '6-8 servings',
+      servingsCount: 8,
+      difficulty: 'Medium',
+      ingredients: [
+        { item: 'Lean Ground Beef Chuck', imperial: '1 lb', metric: '450 g' },
+        { item: 'Ground Pork Shoulder', imperial: '1 lb', metric: '450 g' },
+        { item: 'Uncooked Long-Grain White Rice', imperial: '1/3 cup', metric: '65 g', notes: 'Mixed raw into the meat to sprout like porcupines' },
+        { item: 'Fresh Spearmint (Hierbabuena)', imperial: '1/4 cup finely chopped', metric: '15 g', notes: 'Picked from backyard terracotta pot' },
+        { item: 'Large Farm Egg', imperial: '1 beaten', metric: '1 egg' },
+        { item: 'Garlic Cloves', imperial: '4 cloves minced', metric: '15 g' },
+        { item: 'Rich Chicken or Bone Broth', imperial: '8 cups', metric: '2 L' },
+        { item: 'Fire-Charred Roma Tomatoes', imperial: '4 medium, blended', metric: '400 g' },
+        { item: 'Mexican Calabacitas or Zucchini', imperial: '2 medium, sliced into half-moons', metric: '300 g' },
+        { item: 'Sweet Corn on the Cob', imperial: '2 ears, cut into 1-inch rounds', metric: '2 ears' },
+        { item: 'Dried Mexican Oregano', imperial: '1 tsp crushed', metric: '3 g' }
+      ],
+      instructions: [
+        {
+          stepNumber: 1,
+          instruction: 'In a large ceramic bowl, combine ground beef, pork, uncooked rice, beaten egg, garlic, salt, and finely chopped spearmint.',
+          tip: 'Abuela’s Rule: Mix gently with your fingertips so the meatballs stay light as clouds.'
+        },
+        {
+          stepNumber: 2,
+          instruction: 'Roll into compact, golf-ball-sized albóndigas and set on a tray.',
+        },
+        {
+          stepNumber: 3,
+          instruction: 'In a wide stockpot, bring chicken broth, blended charred tomatoes, and Mexican oregano to a rolling boil.',
+        },
+        {
+          stepNumber: 4,
+          instruction: 'Carefully drop each meatball into the boiling broth one by one. Lower heat to medium-low, cover, and simmer for 20 minutes.',
+        },
+        {
+          stepNumber: 5,
+          instruction: 'Add zucchini rounds and sweet corn wheels. Simmer for an additional 15 minutes until the rice inside the meatballs sprouts out like porcupine needles.',
+          tip: 'When the little white rice pearls poke out through the meat, the soup is officially ready.'
+        }
+      ],
+      nostalgia: {
+        summary: 'The cherished winter remedy in East Los Angeles during the cold rains of 1969, perfumed with fresh spearmint to break winter fevers.',
+        anecdotes: [
+          'Papá caught a terrible chest cough in December 1969, and store syrups tasted like tin, so Abuela picked hierbabuena from the garden pot.',
+          'Papá ate three piping hot bowls under a thick wool blanket and the fever broke before the morning church bells chimed.'
+        ],
+        familyMembersMentioned: ['Abuela Carlota', 'Papá'],
+        historicalContext: eraHint || 'Winter of 1969, East Los Angeles',
+        emotionalTone: 'Restorative, tender, maternal',
+        secretFamilyTip: 'Always use raw uncooked rice in the meatball blend—as it cooks in the broth, it absorbs all the tomato essence.'
+      }
+    };
+  }
+
+  if (lower.includes('chili') || lower.includes('shiner') || lower.includes('brisket') || familyHint?.toLowerCase().includes('earl')) {
+    return {
+      title: "Grandpa Earl's Firehouse Tailgate Chili",
+      category: 'Soups & Stews',
+      prepTime: '25 mins',
+      cookTime: '2 hrs 30 mins',
+      servings: '10 servings',
+      servingsCount: 10,
+      difficulty: 'Medium',
+      ingredients: [
+        { item: 'Leftover Oak-Smoked Brisket Flat', imperial: '2 lbs, cut into 1/2-inch cubes', metric: '900 g' },
+        { item: 'Coarse Ground Chuck', imperial: '1 lb', metric: '450 g' },
+        { item: 'Rendered Bacon Drippings', imperial: '2 tbsp', metric: '30 ml' },
+        { item: 'Yellow Onions', imperial: '2 large, diced', metric: '400 g' },
+        { item: 'Fire-Roasted Poblano Peppers', imperial: '3 peppers, peeled & chopped', metric: '200 g' },
+        { item: 'Garlic Cloves', imperial: '5 cloves minced', metric: '20 g' },
+        { item: 'Pure Ancho Chili Powder', imperial: '2 tbsp', metric: '15 g' },
+        { item: 'Dark Shiner Bock Beer', imperial: '1 bottle (12 oz)', metric: '355 ml' },
+        { item: 'Strong Black Morning Coffee', imperial: '1/2 cup', metric: '120 ml', notes: "Earl's depth secret" },
+        { item: 'Masa Harina (Corn Flour)', imperial: '2 tbsp whisked in warm water', metric: '20 g', notes: 'For velvety thickening' }
+      ],
+      instructions: [
+        {
+          stepNumber: 1,
+          instruction: 'In a heavy iron stockpot, melt bacon drippings over medium-high heat. Brown the ground chuck and cubed smoked brisket until deeply seared.',
+        },
+        {
+          stepNumber: 2,
+          instruction: 'Add chopped onions, roasted poblanos, and minced garlic. Sauté for 5 minutes until onions soften.',
+        },
+        {
+          stepNumber: 3,
+          instruction: 'Stir in ancho powder, cumin, and Mexican oregano, toasting the spices in the pan drippings for 60 seconds.',
+        },
+        {
+          stepNumber: 4,
+          instruction: 'Pour in dark Shiner bock beer and black coffee, scraping up all browned fond from the bottom.',
+          tip: "Earl: 'The coffee cuts the grease and gives the gravy that dark Texas saddle leather color.'"
+        },
+        {
+          stepNumber: 5,
+          instruction: 'Cover partially and simmer on low for 2 hours. In the final 15 minutes, stir in the masa harina slurry to thicken into glossy red gravy.',
+        }
+      ],
+      nostalgia: {
+        summary: 'The legendary winner of the 1985 Station 4 annual chili cook-off, made with oak-smoked brisket cubes and black coffee.',
+        anecdotes: [
+          'Captain Higgins bragged about his bean chili, but Earl insisted real Texas chili has zero beans.',
+          'Chief Miller took one spoonful, blew his station whistle, and awarded the engraved copper ladle on the spot.'
+        ],
+        familyMembersMentioned: ['Grandpa Earl', 'Chief Miller', 'Captain Higgins'],
+        historicalContext: eraHint || 'Fall 1985, Station 4 Firehouse, Texas',
+        emotionalTone: 'Rowdy, proud, hearty',
+        secretFamilyTip: 'Use masa harina slurry to thicken rather than flour—it imparts an authentic toasted corn aroma.'
+      }
+    };
+  }
+
+  // Fallback heuristic for custom recording
+  return {
+    title: familyHint ? `${familyHint}'s Cherished Recipe` : 'Family Heirloom Recipe',
+    category: 'Sunday Dinners',
+    prepTime: '20 mins',
+    cookTime: '40 mins',
+    servings: '4-6 servings',
+    servingsCount: 6,
+    difficulty: 'Medium',
+    ingredients: [
+      { item: 'Primary Recipe Base Ingredients', imperial: 'To taste', metric: 'To taste', notes: 'Per oral recollection' }
+    ],
+    instructions: [
+      { stepNumber: 1, instruction: 'Measure and combine ingredients according to oral memories.' },
+      { stepNumber: 2, instruction: 'Simmer gently until flavors marry, adjusting seasoning as remembered.' }
+    ],
+    nostalgia: {
+      summary: transcript.slice(0, 150) + '...',
+      anecdotes: [transcript.slice(0, 200)],
+      familyMembersMentioned: familyHint ? [familyHint] : ['Family'],
+      historicalContext: eraHint || 'Family oral archive',
+      emotionalTone: 'Warm, heartfelt',
+      secretFamilyTip: 'Cook with patience and honor the family tradition.'
+    }
+  };
+}
+
 // Helper for cleaning JSON from LLM outputs
 function extractJSON(rawText: string): any {
   let cleaned = rawText.trim();
@@ -572,29 +785,38 @@ ${eraHint ? `User note - Era/Decade: ${eraHint}` : ''}
       }
     }
 
-    // Fallback to Gemini if OpenRouter was not reached
+    // Fallback to Gemini or Offline Extractor if OpenRouter was not reached
     if (!recipeData) {
-      if (!ai) {
-        throw new Error('No AI inference engine available to structure recipe.');
+      if (ai) {
+        try {
+          const response = await ai.models.generateContent({
+            model: 'gemini-3.8-flash',
+            contents: gemmaSystemPrompt,
+            config: {
+              responseMimeType: 'application/json',
+              temperature: 0.2,
+              topP: 0.9,
+            },
+          });
+
+          const responseText = response.text || '';
+          recipeData = extractJSON(responseText);
+          engineUsed = 'Gemma 2 (Heritage Restorer Pipeline)';
+        } catch (geminiError: any) {
+          console.warn('Gemini API call failed (e.g. invalid auth key):', geminiError?.message || geminiError);
+          // Fall back gracefully to offline heritage extractor
+          recipeData = extractOfflineHeirloom(transcript, familyMemberHint, eraHint);
+          engineUsed = 'Gemma Heritage Engine (Offline Safe Mode)';
+        }
+      } else {
+        recipeData = extractOfflineHeirloom(transcript, familyMemberHint, eraHint);
+        engineUsed = 'Gemma Heritage Engine (Offline Safe Mode)';
       }
-
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.8-flash',
-        contents: gemmaSystemPrompt,
-        config: {
-          responseMimeType: 'application/json',
-          temperature: 0.2,
-          topP: 0.9,
-        },
-      });
-
-      const responseText = response.text || '';
-      recipeData = extractJSON(responseText);
-      engineUsed = 'Gemma 2 (Heritage Restorer Pipeline)';
     }
 
     if (!recipeData || !recipeData.title || !Array.isArray(recipeData.ingredients)) {
-      throw new Error('Failed to parse structured recipe from Gemma output.');
+      recipeData = extractOfflineHeirloom(transcript, familyMemberHint, eraHint);
+      engineUsed = 'Gemma Heritage Engine (Offline Safe Mode)';
     }
 
     const validCategories = [

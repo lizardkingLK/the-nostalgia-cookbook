@@ -252,7 +252,19 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onRecipeCreated })
       }
     } catch (err: unknown) {
       console.error('Processing workflow error:', err);
-      setErrorMessage((err as Error).message || 'Failed to complete recipe extraction.');
+      let friendlyError = (err as Error).message || 'Failed to complete recipe extraction.';
+      if (
+        friendlyError.includes('ACCESS_TOKEN_TYPE_UNSUPPORTED') ||
+        friendlyError.includes('Request had invalid authentication credentials') ||
+        friendlyError.includes('UNAUTHENTICATED')
+      ) {
+        friendlyError =
+          'Google Generative AI Key Notice: Gemini API keys must start with "AIzaSy..." (generated at https://aistudio.google.com/app/apikey). The token provided begins with "AQ." which is an OAuth/Cloud access token, not a Gemini API key.';
+      } else if (friendlyError.includes('User not found')) {
+        friendlyError =
+          'OpenRouter API Key Notice: The OpenRouter key was not recognized (returned 401). Please check your key at https://openrouter.ai/keys.';
+      }
+      setErrorMessage(friendlyError);
       setIsProcessing(false);
     }
   };
