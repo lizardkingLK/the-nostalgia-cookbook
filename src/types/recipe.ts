@@ -38,6 +38,7 @@ export interface IRecipe {
   rawTranscript: string;
   audioDurationSeconds?: number;
   engineUsed?: string;
+  warning?: string;
   createdAt: string;
   updatedAt: string;
 }

@@ -119,7 +119,28 @@ function runTests() {
     assert(false, `Test 4 failed with error: ${(e as Error).message}`);
   }
 
-  // Test 5: Rejection of invalid structures
+  // Test 5: Action phrase stripping (e.g., "making Rose's Real Sunday" -> "Rose's Real Sunday Pot Roast")
+  try {
+    const transcript = "If you want to make Rose's real Sunday pot roast, with a 4 pound chuck roast...";
+    const cleanedAction = sanitizeRecipeTitle("making Rose's Real Sunday", transcript);
+    assert(cleanedAction.startsWith("Rose's"), "Strips leading action verb 'making' and keeps Rose's");
+    assert(cleanedAction.includes("Sunday"), "Preserves Sunday");
+    assert(cleanedAction.includes("Pot Roast"), "Enriches with Pot Roast from transcript");
+  } catch (e) {
+    assert(false, `Test 5 failed with error: ${(e as Error).message}`);
+  }
+
+  // Test 6: Pure apostrophe cut-off "'s Real Sunday"
+  try {
+    const transcript = "We are cooking Rose's real Sunday dinner.";
+    const recoveredApostrophe = sanitizeRecipeTitle("'s Real Sunday", transcript);
+    assert(recoveredApostrophe.startsWith("Rose's"), "Recovers person name from leading apostrophe-s");
+    assert(recoveredApostrophe.includes("Sunday"), "Preserves remainder words");
+  } catch (e) {
+    assert(false, `Test 6 failed with error: ${(e as Error).message}`);
+  }
+
+  // Test 7: Rejection of invalid structures
   try {
     const invalidJson = '{"foo": "bar"}';
     cleanAndParseGemmaResponse(invalidJson);

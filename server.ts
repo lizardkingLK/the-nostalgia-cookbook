@@ -736,15 +736,20 @@ function extractOfflineHeirloom(transcript: string, familyHint?: string, eraHint
   let discoveredTitle = '';
   const normTranscript = transcript.replace(/[’‘`]/g, "'");
 
-  // Priority A: Action phrases like "making Rose's real Sunday..." or "how to make Grandma's..."
-  const actionPhraseMatch = normTranscript.match(/(?:making|make|cooking|cook|baking|bake|preparing|prepare)\s+([a-zA-Z0-9'\-\s]{3,45}?)(?:\.|\,|back|when|recipe|for|is|in|that|the\s+kind)/i);
+  // Priority A: Action phrases like "making Rose's real Sunday...", "how to make Grandma's..."
+  const actionPhraseMatch = normTranscript.match(/(?:how\s+to\s+make|making|make|cooking|cook|baking|bake|preparing|prepare)\s+([a-zA-Z0-9'\-\s]{3,50})/i);
   if (actionPhraseMatch && actionPhraseMatch[1]) {
-    discoveredTitle = actionPhraseMatch[1].trim();
+    let candidate = actionPhraseMatch[1].trim();
+    // Strip trailing punctuation, clause connectors or narrative words
+    candidate = candidate.replace(/(?:\.|\,|;|\!|\?|back|when|recipe|for|is|in|that|the\s+kind).*$/i, '').trim();
+    if (candidate.length >= 3 && !/^(occasion|setting|recipe|dinner|food|kitchen|story|memories|things?)$/i.test(candidate)) {
+      discoveredTitle = candidate;
+    }
   }
 
-  // Priority B: Named dishes like "Rose's real Sunday Pot Roast"
+  // Priority B: Named dishes like "Rose's real Sunday", "Rose's real Sunday Pot Roast"
   if (!discoveredTitle) {
-    const personDishMatch = normTranscript.match(/([a-zA-Z]+'s\s+(?:real\s+|famous\s+|secret\s+|cherished\s+)?(?:Sunday\s+)?[a-zA-Z0-9'\-\s]{3,35}?(?:Pot\s+Roast|Roast|Cake|Pie|Stew|Soup|Chili|Cobbler|Bread|Casserole|Chicken|Brisket))/i);
+    const personDishMatch = normTranscript.match(/([a-zA-Z]+'s\s+(?:real\s+|famous\s+|secret\s+|cherished\s+)?(?:Sunday\s+)?[a-zA-Z0-9'\-\s]{2,35}?(?:Pot\s+Roast|Roast|Cake|Pie|Stew|Soup|Chili|Cobbler|Bread|Casserole|Chicken|Brisket|Sunday))/i);
     if (personDishMatch && personDishMatch[1]) {
       discoveredTitle = personDishMatch[1].trim();
     }
@@ -1060,8 +1065,49 @@ ${eraHint ? `User note - Era/Decade: ${eraHint}` : ''}
 
     let recipeData: any = null;
     let engineUsed = `Gemma (${GEMMA_MODEL})`;
+    let warningMessage: string | null = null;
 
-    // Check if OpenRouter or OpenAI-compatible endpoint
+    // 1. Check if configured for local Open-Weight Model (Docker / Ollama)
+    const isLocalOllama =
+      GEMMA_API_ENDPOINT.includes('11434') ||
+      GEMMA_API_ENDPOINT.includes('/api/generate') ||
+      GEMMA_API_ENDPOINT.includes('/api/chat');
+
+    if (isLocalOllama) {
+      try {
+        console.log(`📡 [Process Recipe] Harnessing local open-weight model via Ollama (${GEMMA_MODEL})...`);
+        const endpoint = GEMMA_API_ENDPOINT.includes('/api/generate')
+          ? GEMMA_API_ENDPOINT
+          : `${GEMMA_API_ENDPOINT.replace(/\/+$/, '')}/api/generate`;
+
+        const ollamaRes = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: GEMMA_MODEL,
+            prompt: gemmaSystemPrompt,
+            format: 'json',
+            stream: false,
+          }),
+        });
+
+        if (ollamaRes.ok) {
+          const ollamaJson = await ollamaRes.json();
+          const responseText = ollamaJson.response;
+          if (responseText) {
+            recipeData = extractJSON(responseText);
+            engineUsed = `Gemma 2 (${GEMMA_MODEL}) [Local Open-Weight Docker]`;
+            console.log('✅ Local Open-Weight model responded successfully!');
+          }
+        } else {
+          console.warn(`Local Ollama returned status ${ollamaRes.status}`);
+        }
+      } catch (ollamaErr) {
+        console.warn('Local Ollama connection notice:', (ollamaErr as Error).message);
+      }
+    }
+
+    // 2. Cloud OpenRouter Endpoint (if not running local Ollama)
     const effectiveOpenRouterKey = (GEMMA_API_KEY && GEMMA_API_KEY !== 'empty')
       ? GEMMA_API_KEY.trim()
       : (process.env.OPENROUTER_API_KEY ? process.env.OPENROUTER_API_KEY.trim() : '');
@@ -1071,7 +1117,7 @@ ${eraHint ? `User note - Era/Decade: ${eraHint}` : ''}
         ? NEXTAUTH_URL
         : 'https://the-nostalgia-cookbook-83vbe.ondigitalocean.app';
 
-    if (effectiveOpenRouterKey && effectiveOpenRouterKey.length > 5) {
+    if (!recipeData && effectiveOpenRouterKey && effectiveOpenRouterKey.length > 5 && !isLocalOllama) {
       try {
         console.log(`📡 [Process Recipe] Invoking OpenRouter Gemma 2 [model: ${GEMMA_MODEL}]...`);
         const response = await fetch(GEMMA_API_ENDPOINT, {
@@ -1110,6 +1156,14 @@ ${eraHint ? `User note - Era/Decade: ${eraHint}` : ''}
           const errText = await response.text();
           console.error(`❌ OpenRouter Gemma returned status ${response.status}:`, errText);
 
+          if (response.status === 429) {
+            warningMessage = 'OpenRouter Gemma is temporarily rate-limited (429). The system provided an offline structured extraction preview. To avoid rate limits, harness the free local open-weight model with ./scripts/run-docker-ai.sh.';
+            engineUsed = 'Gemma Heritage Engine (Offline Preview - OpenRouter Rate Limited)';
+          } else if (response.status === 402) {
+            warningMessage = 'OpenRouter returned insufficient credits (402). The system provided an offline structured extraction preview. We do not use paid tiers; harness the free local open-weight model with ./scripts/run-docker-ai.sh.';
+            engineUsed = 'Gemma Heritage Engine (Offline Preview - OpenRouter Insufficient Credits)';
+          }
+
           // If rate-limited (429) or insufficient credits (402), retry with alternative free models
           if (response.status === 429 || response.status === 402) {
             const alternativeModels = [
@@ -1119,7 +1173,6 @@ ${eraHint ? `User note - Era/Decade: ${eraHint}` : ''}
 
             for (const altModel of alternativeModels) {
               console.log(`💡 Retrying with alternative OpenRouter model (${altModel})...`);
-              // Small backoff delay to allow upstream rate limit window to clear
               await new Promise((resolve) => setTimeout(resolve, 1500));
               try {
                 const altRes = await fetch(GEMMA_API_ENDPOINT, {
@@ -1152,6 +1205,7 @@ ${eraHint ? `User note - Era/Decade: ${eraHint}` : ''}
                   if (altContent) {
                     recipeData = extractJSON(altContent);
                     engineUsed = `Gemma (${altModel}) (OpenRouter)`;
+                    warningMessage = null; // Cleared because alternative succeeded
                     console.log(`✅ OpenRouter model ${altModel} succeeded!`);
                     break;
                   }
@@ -1168,8 +1222,6 @@ ${eraHint ? `User note - Era/Decade: ${eraHint}` : ''}
       } catch (openRouterErr) {
         console.error('❌ OpenRouter Gemma execution error:', (openRouterErr as Error).message);
       }
-    } else {
-      console.warn('⚠️ Skipping OpenRouter: No valid GEMMA_API_KEY or OPENROUTER_API_KEY detected.');
     }
 
     // Fallback to Gemini or Offline Extractor if OpenRouter was not reached
@@ -1191,19 +1243,24 @@ ${eraHint ? `User note - Era/Decade: ${eraHint}` : ''}
           engineUsed = 'Gemma 2 (Heritage Restorer Pipeline)';
         } catch (geminiError: any) {
           console.warn('Gemini API call failed (e.g. invalid auth key):', geminiError?.message || geminiError);
-          // Fall back gracefully to offline heritage extractor
           recipeData = extractOfflineHeirloom(transcript, familyMemberHint, eraHint);
-          engineUsed = 'Gemma Heritage Engine (Offline Safe Mode)';
+          if (!warningMessage) {
+            engineUsed = 'Gemma Heritage Engine (Offline Safe Mode)';
+          }
         }
       } else {
         recipeData = extractOfflineHeirloom(transcript, familyMemberHint, eraHint);
-        engineUsed = 'Gemma Heritage Engine (Offline Safe Mode)';
+        if (!warningMessage) {
+          engineUsed = 'Gemma Heritage Engine (Offline Safe Mode)';
+        }
       }
     }
 
     if (!recipeData || !recipeData.title || !Array.isArray(recipeData.ingredients)) {
       recipeData = extractOfflineHeirloom(transcript, familyMemberHint, eraHint);
-      engineUsed = 'Gemma Heritage Engine (Offline Safe Mode)';
+      if (!warningMessage) {
+        engineUsed = 'Gemma Heritage Engine (Offline Safe Mode)';
+      }
     }
 
     const validCategories = [
@@ -1343,6 +1400,7 @@ ${eraHint ? `User note - Era/Decade: ${eraHint}` : ''}
       rawTranscript: transcript,
       audioDurationSeconds: audioDurationSeconds || undefined,
       engineUsed,
+      warning: warningMessage || undefined,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -1370,6 +1428,7 @@ ${eraHint ? `User note - Era/Decade: ${eraHint}` : ''}
       success: true,
       recipeId: newRecipe.id,
       recipe: newRecipe,
+      warning: warningMessage || undefined,
       engineUsed,
     });
   } catch (error: unknown) {

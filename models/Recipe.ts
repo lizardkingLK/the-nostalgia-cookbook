@@ -45,6 +45,7 @@ export interface IRecipeDocument extends Document {
   rawTranscript: string;
   audioDurationSeconds?: number;
   engineUsed?: string;
+  warning?: string;
 
   createdAt: Date;
   updatedAt: Date;
@@ -105,6 +106,7 @@ const RecipeSchema = new Schema<IRecipeDocument>(
     rawTranscript: { type: String, required: true },
     audioDurationSeconds: { type: Number },
     engineUsed: { type: String, default: 'Gemma 2 (Ollama Local)' },
+    warning: { type: String },
   },
   { timestamps: true }
 );

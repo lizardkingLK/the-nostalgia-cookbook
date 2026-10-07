@@ -33,34 +33,63 @@ export interface ParsedGemmaOutput {
 export function sanitizeRecipeTitle(rawTitle: string, fullTranscript?: string, hint?: string): string {
   let t = (rawTitle || '').trim();
 
-  // Normalize quotes
+  // Normalize quotes and apostrophes
   t = t.replace(/[’‘`]/g, "'");
   const transcriptNorm = (fullTranscript || '').replace(/[’‘`]/g, "'");
 
-  // If the title starts with "S ", "s ", "'s ", or "'S " (e.g. "S Real Sunday", "s Real Sunday", "'s Real Sunday"):
-  // A possessive name was cut off right at the apostrophe!
+  // Strip leading action verbs (e.g. "making Rose's Real Sunday" -> "Rose's Real Sunday")
+  t = t.replace(/^(?:how\s+to\s+make|how\s+to\s+cook|how\s+to\s+bake|making|make|cooking|cook|baking|bake|preparing|prepare)\s+/i, '');
+
+  // If the title starts with "S ", "s ", "'s ", "'S ", "’s ", or "s'":
+  // A possessive name was cut off right at the apostrophe (e.g. "S Real Sunday", "'s Real Sunday")
   const cutOffMatch = t.match(/^[sS]['']?\s+(.*)/i) || t.match(/^['']s\s+(.*)/i);
   if (cutOffMatch) {
     const remainder = cutOffMatch[1].trim();
-    // Search the transcript for what name was immediately before "'s " + remainder
-    const firstWordOfRemainder = remainder.split(' ')[0];
-    const recoverMatch =
-      transcriptNorm.match(new RegExp(`([A-Za-z]+)'s\\s+(?:real\\s+)?${firstWordOfRemainder}`, 'i')) ||
-      transcriptNorm.match(/([A-Za-z]+)'s/i);
+    const remainderWords = remainder.split(/\s+/);
+    const firstWord = remainderWords[0];
+    let personName = '';
 
-    if (recoverMatch && recoverMatch[1]) {
-      const personName = recoverMatch[1].charAt(0).toUpperCase() + recoverMatch[1].slice(1).toLowerCase();
-      t = `${personName}'s ${remainder}`;
-    } else if (hint) {
-      t = `${hint}'s ${remainder}`;
-    } else if (/rose/i.test(transcriptNorm)) {
-      t = `Rose's ${remainder}`;
+    // Match [Person]'s + remainder's first word in transcript
+    const directMatch = transcriptNorm.match(new RegExp(`\\b([A-Za-z]+)'s\\s+${firstWord}\\b`, 'i'));
+    if (directMatch && directMatch[1]) {
+      personName = directMatch[1];
+    }
+
+    // Match any possessive name in transcript
+    if (!personName) {
+      const anyPossessiveMatch = transcriptNorm.match(/\b([A-Za-z]{2,20})'s\b/i);
+      if (anyPossessiveMatch && anyPossessiveMatch[1] && !/^(it|that|there|what|here|he|she|who|where|how|when)$/i.test(anyPossessiveMatch[1])) {
+        personName = anyPossessiveMatch[1];
+      }
+    }
+
+    // Hint fallback
+    if (!personName && hint) {
+      personName = hint.replace(/'s$/i, '').trim();
+    }
+
+    // Rose fallback if Rose is mentioned anywhere
+    if (!personName && /\bRose\b/i.test(transcriptNorm)) {
+      personName = 'Rose';
+    }
+
+    if (personName) {
+      const formatted = personName.charAt(0).toUpperCase() + personName.slice(1).toLowerCase();
+      t = `${formatted}'s ${remainder}`;
     }
   }
 
-  // Reject generic single words like "Occasion", "Setting", "Recipe"
-  if (/^(occasion|setting|recipe|dinner|food|kitchen|story|memories|things?)$/i.test(t)) {
-    if (hint) {
+  // If title is empty or generic, try extracting dish directly from transcript
+  if (!t || /^(occasion|setting|recipe|dinner|food|kitchen|story|memories|things?)$/i.test(t)) {
+    // Check for "making Rose's Real Sunday" or "Rose's real Sunday..."
+    const actionInTranscript = transcriptNorm.match(/(?:how\s+to\s+make|making|make|cooking|cook|baking|bake|preparing|prepare)\s+([A-Za-z]+'s\s+[A-Za-z0-9'\-\s]{3,35})/i);
+    const namedInTranscript = transcriptNorm.match(/\b([A-Za-z]+'s\s+(?:real\s+|famous\s+|secret\s+|cherished\s+)?(?:Sunday\s+)?[A-Za-z0-9'\-\s]{3,35}?(?:Pot\s+Roast|Roast|Cake|Pie|Stew|Soup|Chili|Cobbler|Bread|Casserole|Chicken|Brisket|Sunday))/i);
+
+    if (actionInTranscript && actionInTranscript[1]) {
+      t = actionInTranscript[1].replace(/(?:\.|\,|;|\!|\?|back|when|recipe|for|is|in|that|the\s+kind).*$/i, '').trim();
+    } else if (namedInTranscript && namedInTranscript[1]) {
+      t = namedInTranscript[1].trim();
+    } else if (hint) {
       t = `${hint}'s Sunday Pot Roast`;
     } else if (/pot\s+roast|roast/i.test(transcriptNorm)) {
       t = /Rose/i.test(transcriptNorm) ? "Rose's Sunday Pot Roast" : "Sunday Pot Roast";
@@ -69,14 +98,14 @@ export function sanitizeRecipeTitle(rawTitle: string, fullTranscript?: string, h
     }
   }
 
-  // If title ends with "Sunday", and transcript is about Pot Roast, append "Pot Roast"
-  if (/Sunday$/i.test(t) && /pot\s+roast|roast/i.test(transcriptNorm)) {
+  // If title ends with "Sunday", and transcript is about Pot Roast / roast, append "Pot Roast"
+  if (/Sunday$/i.test(t) && /pot\s+roast|roast|chuck/i.test(transcriptNorm)) {
     t = `${t} Pot Roast`;
   }
 
   // Ensure title-case while preserving 's
   t = t
-    .split(' ')
+    .split(/\s+/)
     .map((w) => {
       if (/^([a-zA-Z]+)('s)$/i.test(w)) {
         const parts = w.match(/^([a-zA-Z]+)('s)$/i)!;

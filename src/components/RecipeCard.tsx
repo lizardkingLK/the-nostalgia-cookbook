@@ -20,7 +20,8 @@ import {
   Scale,
   Calendar,
   Layers,
-  Loader2
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { IRecipe } from '../types/recipe';
@@ -278,6 +279,17 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onBack }) => {
           </button>
         </div>
       </div>
+
+      {/* Engine Status Warning Banner (if external rate limit or credits noticed) */}
+      {recipe.warning && (
+        <div className="bg-[#FFF8E6] border border-[#E0A838] text-[#805000] p-4 rounded-2xl flex items-start gap-3 no-print shadow-sm">
+          <AlertCircle className="w-5 h-5 text-[#C77C00] flex-shrink-0 mt-0.5" />
+          <div className="text-xs sm:text-sm">
+            <strong className="font-bold block mb-0.5 text-[#5C3A00]">Engine Warning Notice:</strong>
+            <p className="leading-relaxed">{recipe.warning}</p>
+          </div>
+        </div>
+      )}
 
       {/* Main Recipe Header Banner */}
       <div className="bg-[#FAF7F0] border-2 border-[#D8C3B1] rounded-3xl p-6 sm:p-10 shadow-recipe-card relative overflow-hidden print-page">
