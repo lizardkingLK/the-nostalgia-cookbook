@@ -132,25 +132,25 @@ export const PrivacyModal: React.FC<PrivacyModalProps> = ({ onClose }) => {
 
             <div className="flex items-center justify-between p-2.5 bg-[#FAF7F0] rounded-xl border border-[#D8C3B1]">
               <div>
-                <span className="font-semibold block">Gemini Audio Key (GEMINI_API_KEY):</span>
-                <span className="text-[11px] text-[#705335]">Used for Multimodal Voice Transcription</span>
+                <span className="font-semibold block">Google Gemini Key (Optional Fallback):</span>
+                <span className="text-[11px] text-[#705335]">
+                  {gemmaStatus?.hasGemmaKey ? 'Not required (OpenRouter is handling transcription & Gemma)' : 'Used for Google Cloud fallback'}
+                </span>
               </div>
               <div className="flex items-center gap-1.5 font-bold">
-                {gemmaStatus?.hasGeminiKey ? (
-                  gemmaStatus.isGeminiFormatValid ? (
-                    <>
-                      <CheckCircle2 className="w-4 h-4 text-[#607D68]" />
-                      <span className="text-[#3F5645]">{gemmaStatus.geminiKeyMasked} (Active)</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="text-[#C86446]">{gemmaStatus.geminiKeyMasked} (Needs AIzaSy... key)</span>
-                    </>
-                  )
+                {gemmaStatus?.hasGemmaKey ? (
+                  <>
+                    <CheckCircle2 className="w-4 h-4 text-[#607D68]" />
+                    <span className="text-[#3F5645]">OpenRouter Primary</span>
+                  </>
+                ) : gemmaStatus?.hasGeminiKey ? (
+                  <>
+                    <CheckCircle2 className="w-4 h-4 text-[#607D68]" />
+                    <span className="text-[#3F5645]">{gemmaStatus.geminiKeyMasked}</span>
+                  </>
                 ) : (
                   <>
-                    <XCircle className="w-4 h-4 text-[#C86446]" />
-                    <span className="text-[#94442B]">Not Set in Env</span>
+                    <span className="text-[#705335]">Optional</span>
                   </>
                 )}
               </div>

@@ -53,6 +53,7 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onRecipeCreated })
   const [pipelineStage, setPipelineStage] = useState<1 | 2>(1);
   const [statusText, setStatusText] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [liveSpeechTranscript, setLiveSpeechTranscript] = useState<string>('');
 
   // Refs
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -60,6 +61,7 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onRecipeCreated })
   const timerIntervalRef = useRef<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
+  const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
     return () => {
@@ -90,9 +92,32 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onRecipeCreated })
       setErrorMessage(null);
       setAudioBlob(null);
       setSelectedSample(null);
+      setLiveSpeechTranscript('');
       if (audioUrl) {
         URL.revokeObjectURL(audioUrl);
         setAudioUrl(null);
+      }
+
+      // Initialize browser SpeechRecognition for push-to-talk live speech streaming
+      if (typeof window !== 'undefined' && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+        try {
+          const SpeechRec = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+          const recognition = new SpeechRec();
+          recognition.continuous = true;
+          recognition.interimResults = true;
+          recognition.lang = 'en-US';
+          recognition.onresult = (event: any) => {
+            let current = '';
+            for (let i = 0; i < event.results.length; ++i) {
+              current += event.results[i][0].transcript + ' ';
+            }
+            setLiveSpeechTranscript(current.trim());
+          };
+          recognition.start();
+          recognitionRef.current = recognition;
+        } catch (recErr) {
+          console.warn('SpeechRecognition notice:', recErr);
+        }
       }
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -134,6 +159,13 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onRecipeCreated })
   };
 
   const stopRecording = () => {
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {}
+      recognitionRef.current = null;
+    }
+
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
@@ -144,8 +176,15 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onRecipeCreated })
   };
 
   const resetRecording = () => {
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {}
+      recognitionRef.current = null;
+    }
     setIsRecording(false);
     setAudioBlob(null);
+    setLiveSpeechTranscript('');
     setRecordingSeconds(0);
     setSelectedFileName(null);
     setSelectedSample(null);
@@ -213,9 +252,13 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onRecipeCreated })
         rawTranscript = selectedSample.sampleTranscript;
         durationSec = selectedSample.durationSeconds;
       } else if (audioBlob) {
-        // Stage 1: Multimodal Transcription via Gemini API
+        // Stage 1: Audio Transcription via OpenRouter Whisper
         setPipelineStage(1);
-        setStatusText('Stage 1: Gemini is analyzing audio & transcribing verbatim memories, pauses, and measurements...');
+        setStatusText(
+          liveSpeechTranscript
+            ? 'Stage 1: Finalizing transcribed voice memo...'
+            : 'Stage 1: Transcribing oral voice memo & memories via OpenRouter Whisper...'
+        );
 
         const base64Audio = await blobToBase64(audioBlob);
 
@@ -226,6 +269,7 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onRecipeCreated })
             audioData: base64Audio,
             mimeType: audioBlob.type || 'audio/webm',
             filename: selectedFileName || 'family-recording.webm',
+            clientTranscript: liveSpeechTranscript.trim() || undefined,
           }),
         });
 
@@ -240,9 +284,9 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onRecipeCreated })
         throw new Error('Please record audio, upload a file, paste a story, or select a sample recording first.');
       }
 
-      // Stage 2: Private Restructuring via Open-Source Gemma Heritage Restorer
+      // Stage 2: Private Restructuring via OpenRouter Gemma 2 (27B)
       setPipelineStage(2);
-      setStatusText('Stage 2: Open-Source Gemma is isolating culinary mechanics (Imperial/Metric) and preserving family lore...');
+      setStatusText('Stage 2: Open-Source Gemma 2 (27B) is isolating culinary mechanics & family lore via OpenRouter...');
 
       const processRes = await fetch('/api/process-recipe', {
         method: 'POST',
@@ -450,6 +494,13 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ onRecipeCreated })
               </button>
             )}
           </div>
+
+          {liveSpeechTranscript && (
+            <div className="mt-5 max-w-lg mx-auto p-3.5 bg-[#FAF7F0] border border-[#ADC2B2] rounded-xl text-xs text-[#3F5645] italic shadow-vintage-inset text-left">
+              <span className="font-bold not-italic text-[#607D68] block mb-1">Live Voice Memo Preview:</span>
+              &ldquo;{liveSpeechTranscript}&rdquo;
+            </div>
+          )}
         </div>
       )}
 

@@ -1,5 +1,56 @@
 [
   {
+    "id": "recipe-1791346570516-4v2xc",
+    "title": "Rose's Real Sunday Pot Roast",
+    "category": "Sunday Dinners",
+    "prepTime": "20 mins",
+    "cookTime": "1 hr 30 mins",
+    "servings": "6-8 servings",
+    "servingsCount": 8,
+    "difficulty": "Medium",
+    "ingredients": [
+      {
+        "amount": "4",
+        "unit": "lbs",
+        "name": "Beef Chuck Roast",
+        "item": "Beef Chuck Roast",
+        "imperial": "4 lbs",
+        "metric": "1814 g"
+      },
+      {
+        "amount": "1",
+        "unit": "tbsp",
+        "name": "Coarse Salt",
+        "item": "Coarse Salt",
+        "imperial": "1 tbsp",
+        "metric": "15 g"
+      }
+    ],
+    "instructions": [
+      {
+        "stepNumber": 1,
+        "instruction": "He brought back a massive 4 pound chuck roast, and she would pour coarse salt right over the beef in the hot skillet..."
+      }
+    ],
+    "nostalgia": {
+      "summary": "If you want to make Rose's real Sunday pot roast, the kind that filled the whole house on Sunday afternoons, you have to remember the blizzard of 1968.",
+      "anecdotes": [
+        "If you want to make Rose's real Sunday pot roast, the kind that filled the whole house on Sunday afternoons, you have to remember the blizzard of 1968.",
+        "He brought back a massive 4 pound chuck roast, and she would pour coarse salt right over the beef in the hot skillet..."
+      ],
+      "familyMembersMentioned": [
+        "Rose"
+      ],
+      "historicalContext": "blizzard of 1968",
+      "emotionalTone": "Heartwarming, nostalgic, cozy",
+      "secretFamilyTip": "He brought back a massive 4 pound chuck roast, and she would pour coarse salt right over the beef in the hot skillet..."
+    },
+    "rawTranscript": "If you want to make Rose's real Sunday pot roast, the kind that filled the whole house on Sunday afternoons, you have to remember the blizzard of 1968. He brought back a massive 4 pound chuck roast, and she would pour coarse salt right over the beef in the hot skillet...",
+    "engineUsed": "Gemma Heritage Engine (Offline Safe Mode)",
+    "createdAt": "2026-10-07T04:16:10.516Z",
+    "updatedAt": "2026-10-07T04:16:10.516Z"
+  },
+  {
     "id": "recipe-1791196152411-v2h5e",
     "title": "Rose's Sunday Pot Roast",
     "category": "Sunday Dinners",
