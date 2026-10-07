@@ -1109,6 +1109,61 @@ ${eraHint ? `User note - Era/Decade: ${eraHint}` : ''}
         } else {
           const errText = await response.text();
           console.error(`❌ OpenRouter Gemma returned status ${response.status}:`, errText);
+
+          // If rate-limited (429) or insufficient credits (402), retry with alternative free models
+          if (response.status === 429 || response.status === 402) {
+            const alternativeModels = [
+              'google/gemma-4-26b-a4b-it:free',
+              'google/gemma-4-31b-it:free',
+            ].filter((m) => m !== GEMMA_MODEL);
+
+            for (const altModel of alternativeModels) {
+              console.log(`💡 Retrying with alternative OpenRouter model (${altModel})...`);
+              // Small backoff delay to allow upstream rate limit window to clear
+              await new Promise((resolve) => setTimeout(resolve, 1500));
+              try {
+                const altRes = await fetch(GEMMA_API_ENDPOINT, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${effectiveOpenRouterKey}`,
+                    'HTTP-Referer': effectiveReferer,
+                    'X-Title': 'The Nostalgia Cookbook',
+                  },
+                  body: JSON.stringify({
+                    model: altModel,
+                    messages: [
+                      {
+                        role: 'system',
+                        content: 'You are a culinary data extraction engine. Isolate clean recipe ingredients, steps, and family lore into strict raw JSON format.',
+                      },
+                      {
+                        role: 'user',
+                        content: gemmaSystemPrompt,
+                      },
+                    ],
+                    temperature: 0.2,
+                  }),
+                });
+
+                if (altRes.ok) {
+                  const altData = await altRes.json();
+                  const altContent = altData.choices?.[0]?.message?.content;
+                  if (altContent) {
+                    recipeData = extractJSON(altContent);
+                    engineUsed = `Gemma (${altModel}) (OpenRouter)`;
+                    console.log(`✅ OpenRouter model ${altModel} succeeded!`);
+                    break;
+                  }
+                } else {
+                  const altErr = await altRes.text();
+                  console.warn(`Alternative model ${altModel} status ${altRes.status}:`, altErr);
+                }
+              } catch (altErr) {
+                console.warn(`Alternative model ${altModel} exception:`, (altErr as Error).message);
+              }
+            }
+          }
         }
       } catch (openRouterErr) {
         console.error('❌ OpenRouter Gemma execution error:', (openRouterErr as Error).message);
