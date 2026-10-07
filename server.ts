@@ -22,29 +22,38 @@ const isProduction = process.env.NODE_ENV === 'production';
 
 // Configuration from environment variables
 const MONGODB_URI =
-  process.env.MONGODB_URI ||
-  'empty';
+  process.env.MONGODB_URI && process.env.MONGODB_URI !== 'empty'
+    ? process.env.MONGODB_URI
+    : '';
 
 const GEMMA_API_ENDPOINT =
-  process.env.GEMMA_API_ENDPOINT ||
-  'empty';
+  process.env.GEMMA_API_ENDPOINT && process.env.GEMMA_API_ENDPOINT !== 'empty'
+    ? process.env.GEMMA_API_ENDPOINT
+    : 'https://openrouter.ai/api/v1/chat/completions';
 
 const GEMMA_API_KEY =
-  process.env.GEMMA_API_KEY ||
-  process.env.OPENROUTER_API_KEY ||
-  'empty';
+  (process.env.GEMMA_API_KEY && process.env.GEMMA_API_KEY !== 'empty')
+    ? process.env.GEMMA_API_KEY
+    : (process.env.OPENROUTER_API_KEY && process.env.OPENROUTER_API_KEY !== 'empty')
+    ? process.env.OPENROUTER_API_KEY
+    : '';
 
 const GEMMA_MODEL =
-  process.env.GEMMA_MODEL || 'empty';
+  process.env.GEMMA_MODEL && process.env.GEMMA_MODEL !== 'empty'
+    ? process.env.GEMMA_MODEL
+    : 'google/gemma-2-27b-it';
 
 const GEMINI_API_KEY =
-  process.env.GEMINI_API_KEY ||
-  process.env.GOOGLE_API_KEY ||
-  'empty';
+  process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'empty'
+    ? process.env.GEMINI_API_KEY
+    : process.env.GOOGLE_API_KEY && process.env.GOOGLE_API_KEY !== 'empty'
+    ? process.env.GOOGLE_API_KEY
+    : '';
 
 const NEXTAUTH_URL =
-  process.env.NEXTAUTH_URL ||
-  'empty';
+  process.env.NEXTAUTH_URL && process.env.NEXTAUTH_URL !== 'empty' && process.env.NEXTAUTH_URL.startsWith('http')
+    ? process.env.NEXTAUTH_URL
+    : 'https://the-nostalgia-cookbook-83vbe.ondigitalocean.app';
 
 // MongoDB Atlas Connection
 let isMongoConnected = false;
@@ -191,8 +200,8 @@ app.post('/api/auth/signout', (req: Request, res: Response) => {
 // Check Gemma / Inference Status
 app.get('/api/gemma-status', async (req: Request, res: Response) => {
   const isUsingOpenRouter = GEMMA_API_ENDPOINT.includes('openrouter.ai');
-  const hasGemmaKey = Boolean(GEMMA_API_KEY && GEMMA_API_KEY.trim().length > 0);
-  const hasGeminiKey = Boolean(GEMINI_API_KEY && GEMINI_API_KEY.trim().length > 0);
+  const hasGemmaKey = Boolean(GEMMA_API_KEY && GEMMA_API_KEY !== 'empty' && GEMMA_API_KEY.trim().length > 5);
+  const hasGeminiKey = Boolean(GEMINI_API_KEY && GEMINI_API_KEY !== 'empty' && GEMINI_API_KEY.trim().length > 5);
   const isGeminiFormatValid = hasGeminiKey && GEMINI_API_KEY.startsWith('AIzaSy');
 
   let isConnected = false;
@@ -1053,14 +1062,24 @@ ${eraHint ? `User note - Era/Decade: ${eraHint}` : ''}
     let engineUsed = `Gemma (${GEMMA_MODEL})`;
 
     // Check if OpenRouter or OpenAI-compatible endpoint
-    if (GEMMA_API_ENDPOINT.includes('openrouter.ai') || GEMMA_API_ENDPOINT.includes('/v1/chat/completions')) {
+    const effectiveOpenRouterKey = (GEMMA_API_KEY && GEMMA_API_KEY !== 'empty')
+      ? GEMMA_API_KEY.trim()
+      : (process.env.OPENROUTER_API_KEY ? process.env.OPENROUTER_API_KEY.trim() : '');
+
+    const effectiveReferer =
+      NEXTAUTH_URL && NEXTAUTH_URL.startsWith('http')
+        ? NEXTAUTH_URL
+        : 'https://the-nostalgia-cookbook-83vbe.ondigitalocean.app';
+
+    if (effectiveOpenRouterKey && effectiveOpenRouterKey.length > 5) {
       try {
+        console.log(`📡 [Process Recipe] Invoking OpenRouter Gemma 2 [model: ${GEMMA_MODEL}]...`);
         const response = await fetch(GEMMA_API_ENDPOINT, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${GEMMA_API_KEY}`,
-            'HTTP-Referer': NEXTAUTH_URL,
+            'Authorization': `Bearer ${effectiveOpenRouterKey}`,
+            'HTTP-Referer': effectiveReferer,
             'X-Title': 'The Nostalgia Cookbook',
           },
           body: JSON.stringify({
@@ -1085,13 +1104,17 @@ ${eraHint ? `User note - Era/Decade: ${eraHint}` : ''}
           if (content) {
             recipeData = extractJSON(content);
             engineUsed = `Gemma 2 27B (OpenRouter Hosted)`;
+            console.log('✅ OpenRouter Gemma 2 27B returned structured recipe successfully!');
           }
         } else {
-          console.warn('OpenRouter Gemma endpoint status:', response.status);
+          const errText = await response.text();
+          console.error(`❌ OpenRouter Gemma returned status ${response.status}:`, errText);
         }
       } catch (openRouterErr) {
-        console.warn('OpenRouter Gemma error, falling back:', openRouterErr);
+        console.error('❌ OpenRouter Gemma execution error:', (openRouterErr as Error).message);
       }
+    } else {
+      console.warn('⚠️ Skipping OpenRouter: No valid GEMMA_API_KEY or OPENROUTER_API_KEY detected.');
     }
 
     // Fallback to Gemini or Offline Extractor if OpenRouter was not reached
